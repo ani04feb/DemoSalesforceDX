@@ -1,0 +1,33 @@
+<apex:page standardController="Hazard__c" showHeader="true" sidebar="true" extensions="zHazard">
+    <apex:form >
+    <apex:pageBlock title="Hazard" >
+        <apex:pageBlockButtons >
+            <apex:commandButton action="{!saveRec}" value="Save"/>
+            <apex:commandButton action="{!saveNew}" value="Save and New"/>
+            <apex:commandButton action="{!cancel}" value="Cancel"/>
+        </apex:pageBlockButtons>
+        <apex:pageBlockSection title="Information" columns="2">
+            <apex:inputField value="{!Hazard__c.Potential_Issues__c}" style="Width:80%;"/>
+            <apex:inputField value="{!Hazard__c.Key_Steps__c}" style="Width:80%;"/>
+            <apex:inputField value="{!Hazard__c.Current_Controls__c}" style="Width:80%;"/>
+            <apex:inputField value="{!Hazard__c.Risk_Rating__c}"/>
+            <apex:inputField value="{!Hazard__c.Current_Risk_Rating_Category__c}"/>
+            <apex:inputField value="{!Hazard__c.Current_Risk_Rating_Acceptable__c}"/>
+            <apex:inputField value="{!Hazard__c.Comments__c}" style="Width:80%;"/>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection title="Control Options" columns="1">
+            <apex:inputField value="{!Hazard__c.Control_Options__c}"/>
+            <apex:inputField value="{!Hazard__c.Immediate_Controls_Implemented__c}" style="Width:80%;"/>
+            <apex:inputField value="{!Hazard__c.Control_Options_to_be_Implemented__c}" style="Width:80%;"/>
+            <apex:inputField value="{!Hazard__c.Risk_Rating_if_Actions__c}"/>
+            <apex:inputField value="{!Hazard__c.Risk_Rating_Category__c}"/>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection title="Risk Matrix" columns="1">
+            <apex:image value="{!$Resource.RiskMatrix3}" width="900" height="236" style="align:centre;"/>
+            </apex:pageBlockSection>
+        <apex:pageBlockSection title="Hierarchy of Controls" columns="1">
+            <apex:image value="{!$Resource.Heirachyofcontrol3}" width="900" height="236" style="align:centre;"/>
+            </apex:pageBlockSection>
+    </apex:pageBlock>
+    </apex:form>
+</apex:page>

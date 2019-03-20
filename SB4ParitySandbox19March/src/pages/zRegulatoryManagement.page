@@ -1,0 +1,283 @@
+<!-- This page is required to publish regulatory Management  -->
+<apex:page controller="zRegulatoryManagement" tabStyle="Regulator_Management__c" docType="html-5.0">
+    <!-------------------------------------------------------------
+    Author:        Rohit Kumar, Lok Jackson
+    Company:       Salesforce.com
+    Description:   Regulatory Management
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    25-Jun-15    Rohit          Initial Version - Ported functionality as per requirement
+    ------------------------------------------------------------>
+    
+   <style>
+        .ui-autocomplete-loading { 
+            background: white url(/img/loading32.gif) right center no-repeat;
+            background-size:15px 15px; 
+        }
+        .placeHolder {
+            font-style: italic;
+        }
+        .hide{
+            display : none;
+        }
+    </style>
+ <apex:form >
+ 
+ 
+     <apex:pageBlock title="Regulatory Management" >
+       <apex:pageMessages id="errorMessage"/>
+            <apex:actionREgion >
+                 <apex:pageBlockSection title="Information" columns="1">
+                     <apex:inputField value="{!regulatory.Brand__c}" required="true" styleclass="brand labelcol">
+                      <apex:actionSupport event="onchange" status="brand" rerender="script,NMICompliance" oncomplete="NMICompliance();">
+                                            <apex:actionStatus id="brand">
+                                                <apex:facet name="start">
+                                                     <apex:image value="{!URLFOR($Resource.loading)}"
+                                                          style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                                </apex:facet>
+                                            </apex:actionStatus>
+                        </apex:actionSupport>
+                      </apex:inputField>
+                  </apex:pageBlockSection>
+              </apex:actionRegion>
+               <apex:actionRegion >
+               <apex:pageBlockSection columns="1">
+                  <apex:inputField value="{!regulatory.Location__c}" required="true" styleclass="labelcol">
+                        <apex:actionSupport event="onchange" action="{!reInforceCorrectiveAction}" reRender="script,tblAction" status="locationChange">
+                                        <apex:actionStatus id="locationChange">
+                                            <apex:facet name="start">
+                                                 <apex:image value="{!URLFOR($Resource.loading)}"
+                                                      style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                            </apex:facet>
+                                        </apex:actionStatus>
+                      </apex:actionSupport>
+               </apex:inputField>
+              </apex:pageBlockSection>
+              </apex:actionregion>
+           <apex:pageBlockSection columns="2">
+                   <apex:inputField value="{!regulatory.Reporting_Person__c}" required="true"/>
+                   <apex:inputField value="{!regulatory.Date_of_Contact__c}" required="true"/>
+                   <apex:inputField value="{!regulatory.Reason_for_Contact_Visit__c}" required="true"/>
+                   <apex:inputField value="{!regulatory.Compliance_Category__c}" required="true"/>
+                   <apex:inputField value="{!regulatory.Other_Reason_for_Contact_Visit__c}" style="width:80%"/>
+                   <apex:inputField value="{!regulatory.Related_Incident__c}"/>
+                   <apex:inputField value="{!regulatory.Associated_Regulator_Management__c}"/>
+        </apex:pageBlockSection> 
+        <apex:pageBlockSection columns="1">
+                   <apex:inputField value="{!regulatory.Description_of_Contact__c}" style="width:80%"/>
+        </apex:pageBlockSection> 
+        <apex:pageBlockSection title="Regulator Details" columns="2">
+                   <apex:inputField value="{!regulatory.Regulatory_Body__c}" required="true" />
+                   <apex:inputField value="{!regulatory.Phone__c}" />
+                   <apex:inputField value="{!regulatory.Name_of_Inspector__c}" />
+                   <apex:inputField value="{!regulatory.Email__c}" />
+        </apex:pageBlockSection>
+        <apex:pageBlockSection title="Details of Regulator Contact" columns="1" id="RegConDetails">
+                   <apex:inputField value="{!regulatory.Issues_Identified__c}" required="true"/>
+                   <apex:inputField value="{!regulatory.Non_Compliance_Details__c}" style="width:80%"/>
+        </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1">
+                    <apex:inputField value="{!regulatory.Paperwork_Left__c}" required="true" styleClass="paperworkLeft">
+                   <apex:actionSupport event="onchange" status="paperwork" rerender="script" oncomplete="PaperworkLeft();">
+                                            <apex:actionStatus id="paperwork">
+                                                <apex:facet name="start">
+                                                     <apex:image value="{!URLFOR($Resource.loading)}"
+                                                          style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                                </apex:facet>
+                                            </apex:actionStatus>
+                        </apex:actionSupport>
+                   </apex:inputField>
+                   <span style="font-weight:bold;color:red;" class="hide paperwork">{!$label.PleaseAttachPaperWork}</span>
+        </apex:pageBlockSection>
+         <apex:pageBlockSection columns="1">
+           <apex:inputField value="{!regulatory.Notice_Type__c}" styleclass="notice"> 
+                <apex:actionSupport event="onchange" status="noticeType" rerender="script,NMICompliance"  oncomplete="NMICompliance();">
+                                    <apex:actionStatus id="noticeType">
+                                        <apex:facet name="start">
+                                             <apex:image value="{!URLFOR($Resource.loading)}"
+                                                  style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                </apex:actionSupport>
+           </apex:inputField>
+           <apex:inputField value="{!regulatory.Notice_Type_Other__c}" style="width:95%;"/>
+           <apex:inputField value="{!regulatory.Reference_Number__c}" style="width:50%;"/>
+         </apex:pageBlockSection>  
+          
+       <apex:pageBlockSection id="NMICompliance" columns="1" >
+            <span style="font-weight:bold;color:red;" class="hide compliance">{!$label.NMICompliance}</span>
+        </apex:pageBlockSection>
+                        <!-- Beginning of Immediate Actions -->
+          <apex:actionRegion >
+            <apex:pageBlockSection title="Immediate Actions Taken (Please enter at least one)" columns="1">
+                <apex:outputText >What did you do to take care of the people involved and make the area safe?</apex:outputText>
+                <apex:pageBlockTable value="{!ImmediateTasks}" var="Action" id="tblAction2">
+                    <apex:column headerValue="Actions" width="50%">
+                        <apex:inputText value="{!Action.Action}" style="width: 95%"/>
+                    </apex:column>
+                    <!-- New Column added to take Completed By as Input -->
+                    <apex:column headerValue="Completed By" width="20%"> 
+                        <apex:inputText id="CompletedBy" value="{!Action.CompletedBy}" style="width : 95%;"/>
+                    </apex:column>
+                    <!-- End of modification -->
+                    <apex:column headerValue="Date Completed" width="15%">
+                        <apex:inputText value="{!Action.DateCompleted}" styleClass="date"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Job Number (if raised)" width="15%">
+                        <apex:inputText value="{!Action.JobNumber}" style="width: 95%"></apex:inputText>
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:outputPanel >
+                    <apex:commandLink action="{!addImmediateCorrectiveActionRow}" reRender="tblAction2,script" status="actionStatus">Add New Row
+                        <apex:actionStatus id="actionStatus">
+                            <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                            </apex:facet>
+                        </apex:actionStatus>
+                    </apex:commandLink>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+          </apex:actionRegion>    
+        <!-- Beginning of Corrective Action Section -->
+        <apex:actionRegion >
+        <apex:pageBlockSection title="Further Corrective Actions to be Implemented" columns="1">
+            <apex:outputText >What Behavioural, Environmental or System controls are needed to prevent the incident from occurring again?</apex:outputText>
+                <apex:pageBlockTable value="{!CorrectiveTasks}" var="Action2" id="tblAction">
+                    <apex:column headerValue="Actions" width="40%">
+                        <apex:inputText value="{!Action2.Action}" style="width: 95%"></apex:inputText>
+                    </apex:column>
+                    <!-- New Column added to show Users name to be assigned -->
+                    <apex:column headerValue="Assigned To" width="20%"> 
+                        <apex:inputText id="autocomplete_textbox" value="{!Action2.searchTerm}" style="width : 95%;"/>
+                        <apex:inputhidden id="searchId" value="{!Action2.selectedUser}"/>
+                    </apex:column>
+                    <!-- End of modification -->
+                    <apex:column headerValue="Due Date" width="10%">
+                        <apex:inputText value="{!Action2.ActivityDate}" styleClass="date"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Job Number (if raised)" width="10%">
+                        <apex:inputText value="{!Action2.JobNumber}" style="width: 95%"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Status" width="10%">
+                        <apex:selectList value="{!Action2.Status}" size="1">
+                            <apex:selectOptions value="{!ActionItemStatuses}"/>
+                        </apex:selectList>                    
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:outputPanel >
+                    <apex:commandLink action="{!addNewCorrectiveActionRow}" reRender="tblAction,script" status="actionStatus" >Add New Row
+                        <apex:actionStatus id="actionStatus">
+                            <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                            </apex:facet>
+                        </apex:actionStatus>
+                    </apex:commandLink>
+                </apex:outputPanel>
+            </apex:pageBlockSection> 
+            </apex:actionRegion>
+          <!-- End of Corrective ction Section --> 
+        
+        <apex:pageBlockSection title="Outcome (Support Centre Use Only)" columns="1">
+           <apex:inputField value="{!regulatory.Outcome_Type__c}" />
+           <apex:inputField value="{!regulatory.Outcome_Other_Details__c}" />
+           <apex:inputField value="{!regulatory.Description_of_Findings__c}"/> 
+           <apex:inputField value="{!regulatory.Reportable_to_the_Board__c}"/> 
+           <apex:inputField value="{!regulatory.Report__c}" style="width:80%"/> 
+        </apex:pageBlockSection>
+        
+        <apex:pageBlockButtons location="both">
+            <apex:commandButton action="{!save}" value="Save" rerender="errorMessage"/>
+            <apex:commandButton action="{!cancel}" value="Cancel" html-formnovalidate="formnovalidate" immediate="true"/>
+        </apex:pageBlockButtons>
+     </apex:pageBlock>
+       <!-- AutoComplete Code for Type Ahead Search -->
+    <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js" />
+    <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js" />
+      <!-- AutoComplete UI CSS -->
+     <apex:styleSheet value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+    <!-- End of AutoComplete UI CSS -->
+       <apex:outputPanel id="script">
+           <script type="text/javascript">
+         //To remove conflictions of jquery
+            var $q = jQuery.noConflict();            
+            $q(document).ready(function() {
+                //Auto complete textbox component
+                var autoCompleteTextBoxId = "input[id$='autocomplete_textbox']";
+                var autoCompleteImmediateTextBoxId = "input[id$='autocomplete_textbox_immediate']";
+                var queryTerm;
+                //auto complete method
+                $q(autoCompleteTextBoxId).autocomplete({
+                    minLength: 2,
+                    source: function(request, response) {
+                                queryTerm = request.term;
+                                var sObjects;
+                                var searchText = $q(autoCompleteTextBoxId).val();
+                                zRegulatoryManagement.searchUser(request.term, function(result, event){
+                                    if(event.type == 'exception') {
+                                          alert(event.message);
+                                    } else {
+                                         sObjects = result;
+                                         response(sObjects);
+                                    }
+                                });
+                          },
+                    focus: function( event, ui ) {
+                            $q(this).val( ui.item.Name );
+                            return false;
+                            },
+                    select: function( event, ui ) {
+                                  $q(this).val( ui.item.Name );                                
+                                  $q(this).next().val(ui.item.Id);
+                                return false;
+                            },
+                    create: function () {
+                        $q(this).data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+                        var entry = "<a>" + item.Name;
+                        entry = entry + "</a>";
+                        entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+                        //console.log(item);
+                        return $q( "<li></li>" )
+                            .data( "item.autocomplete", item )
+                            .append( entry )
+                            .appendTo( ul );
+                       }
+                    }
+                 })
+                 $q( ".date" ).datepicker({
+                    changeMonth: true,
+                    changeYear: true,
+                    numberOfMonths: 1,
+                    dateFormat:"dd/mm/yy",
+                    showAnim: "slide"
+                })
+                });
+            // Javascript function to hide and display label    
+            function NMICompliance() {
+               var brand =  $q('.brand').val();
+               var notice = $q('.notice').val();
+               if(brand == 'Supermarkets' && notice.indexOf('NMI Non-Compliance Notice') > -1){
+                    //console.log('remove');
+                   $q('.compliance').removeClass('hide');
+               }else{
+                   //console.log('add');
+                   $q('.compliance').addClass('hide');
+               }
+            }
+         // Javascript function to hide and display label
+         function PaperworkLeft() {
+               var paperworkleft =  $q('.paperworkLeft').val();
+               if(paperworkleft == 'Yes'){
+                    //console.log('remove');
+                   $q('.paperwork').removeClass('hide');
+               }else{
+                   //console.log('add'+paperworkleft);
+                   $q('.paperwork').addClass('hide');
+               }
+            }
+        </script>  
+       </apex:outputPanel>
+ </apex:form>
+</apex:page>

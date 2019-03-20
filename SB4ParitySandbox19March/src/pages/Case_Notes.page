@@ -1,0 +1,8 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="true" standardcontroller="Case__c" extensions="CaseCommentsController">
+    <apex:form >
+    <apex:pageBlock >
+        <apex:outputText escape="false" value="{!rawNotes}"/>
+        <apex:inputHidden value="{!Case__c.Case_Notes__c}"/>
+    </apex:pageBlock>
+    </apex:form>
+</apex:page>

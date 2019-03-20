@@ -1,0 +1,49 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko, Lok Jackson, Kim Davies, Paul Fayle
+    Company:       Salesforce.com
+    Description:   Given a field set it will display the fields from the set
+    Inputs:        Incident Id, Type of Field Set to display
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    26-Mar-14   Deepu               Initial Version
+    ------------------------------------------------------------>
+    <apex:composition template="zIncidentWizard">
+        <apex:define name="content">
+            <apex:variable var="isTypeGiven" 
+                value="{!AND(NOT ISNULL($CurrentPage.parameters.type), ($CurrentPage.parameters.type!=''))}">
+            </apex:variable>
+
+            <apex:pageMessage rendered="{!NOT isTypeGiven}" severity="error" strength="1" 
+                summary="Invalid Page Parameters" 
+                detail="Type parameter has not been defined properly. Please contact your system administrator."></apex:pageMessage>
+
+            <apex:outputPanel rendered="{!isTypeGiven}">
+                <apex:pageBlockSection columns="1" Title="{!$CurrentPage.parameters.type} Information">
+                    <!-- This page will be given a field set to display in the URL parameter, get a reference to the actual field set in the variable -->
+                    <apex:variable var="FieldSetName" value="{!CASE($CurrentPage.parameters.type,
+                        'Hazard',                       $ObjectType.Incident__c.FieldSets.Hazard,
+                        'Regulatory Compliance',        $ObjectType.Incident__c.FieldSets.Regulatory_Compliance,
+                        'Near Miss',                    $ObjectType.Incident__c.FieldSets.Near_Miss,
+                                                        $ObjectType.Incident__c.FieldSets.Hazard)}"></apex:variable>            
+                                                    
+                    <apex:repeat value="{!FieldSetName}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection columns="1" title="Page Status">
+                    <apex:inputField value="{!Incident__c.Page_4_Complete__c}" id="completedFlagP4" rendered="{!$CurrentPage.parameters.type=='Hazard'}"/>
+                    <apex:inputField value="{!Incident__c.Page_5_Complete__c}" id="completedFlagP6" rendered="{!$CurrentPage.parameters.type=='Near Miss'}"/>
+                    <apex:inputField value="{!Incident__c.Page_6_Complete__c}" id="completedFlagP5" rendered="{!$CurrentPage.parameters.type=='Regulatory Compliance'}"/>
+                </apex:pageBlockSection>
+            </apex:outputPanel>
+            
+            <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+                <apex:inputHidden value="{!Incident__c[typeField]}"/>
+            </apex:repeat>
+            <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+
+        </apex:define>
+    </apex:composition>
+</apex:page>

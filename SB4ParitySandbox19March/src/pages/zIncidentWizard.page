@@ -1,0 +1,265 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard" applyHtmlTag="true" applyBodyTag="true">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko, Lok Jackson, Kim Davies, Paul Fayle,Rohit Kumar
+    Company:       Salesforce.com
+    Description:   Wizard Structure
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    26-Mar-14   Deepu               Initial Version - Ported functionality from existing wizard pages
+    06-Jul-14   Lok Jackson         Updated for Safety v2 to include new pages and remove redundant ones
+    10-Jul-15   Rohit Kumar         Added ScriptActions in Rerender for All Buttons to ensure scope is not lost
+    ------------------------------------------------------------>
+    
+    <style>
+        /* Bread crumbs */
+        span.sep { padding: 5px; }
+        span.present a { color: red; text-decoration: none; font-size: 16px; }
+        span.future a { color: grey; text-decoration: none; font-size: 14px; }
+        span.past a { font-size: 14px; }
+        span.future { color: grey; }
+        
+        /* Page block buttons */
+        .buttonContainer { width:75%; }
+        .buttonLeft { float:left; }
+        .buttonRight { float:right; }
+        
+        /* UI elements on the wizard */
+        textarea { width: 90%; height: 75px; }
+        input[type="text"] { width: 70%; }
+        span.lookupInput input { width: 40%; }  /* Lookup Fields */
+        .overrideWidth { width: auto !important; }  /* Date Time Fields */
+        .debug {display:none;}
+    </style>
+    
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+     <!--script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script -->
+     <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"/>
+    
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('{!thisPage.Breadcrumb__c}');
+        }
+    </script>
+    <apex:outputpanel id="Breadcrumbs">
+        <apex:sectionHeader title="{!thisPage.Breadcrumb__c}">
+    
+            <!-- Navigation variables -->
+            <apex:variable var="prevLnk" value="blank"></apex:variable>
+            <apex:variable var="nextLnk" value="blank"></apex:variable>
+            <apex:variable var="showCID" value="{!$Profile.Name != 'Safety Community User' && $Profile.Name != 'Coles Safety Profile'}"></apex:variable>        
+            <apex:variable var="showSafety" value="{!$Profile.Name == 'Safety High Level Community User' || $Profile.Name == 'Safety Administrator' || $Profile.Name == 'System Administrator'}"/>
+            <apex:variable var="SiteBase" value="/colesservice1/"/>
+            
+            <!-- BREAD CRUMBS -->
+            <apex:repeat value="{!allPages}" var="crumb">
+            
+                <!-- Link coloring depends on the position of it in the whole wizard step -->
+                <apex:variable var="lnkStyle" value="{!IF(crumb.sequence__c < thisPage.Sequence__c, 'past',
+                                        IF(crumb.sequence__c == thisPage.Sequence__c, 'present', 'future') )}"></apex:variable>
+                
+                <!-- Certain links should be displayed only if corresponding incident type is selected -->
+                <!--
+                <apex:variable var="showLnk" 
+                    value="{!IF(Incident__c.Injury_or_Illness__c && crumb.Page__c=='zInvolvedPerson', true,
+                                IF(Incident__c.Injury_or_Illness__c && crumb.Page__c=='zInjury', true,
+                                    IF(((Incident__c.Other_Incident__c && crumb.Page__c=='zOtherIncident') || ((Incident__c.Type__c=='Car Wash' || Incident__c.Type__c=='Crime' || Incident__c.Type__c=='Threatening Situation' || Incident__c.Type__c=='Vehicle' || Incident__c.Type__c=='Co-Tenant') && crumb.Page__c=='zInvolvedPerson')), true,
+                                        IF(Incident__c.Hazard__c && crumb.Page__c=='Hazard', true,
+                                            IF(Incident__c.Regulatory_Compliance__c && crumb.Page__c=='Regulatory_Compliance', true,
+                                                    IF(crumb.Page__c=='zCoding' && showCID, true,
+                                                        IF(crumb.Page__c=='zIncidentSummary' || crumb.Page__c=='zMiscellaneous' || (crumb.Page__c=='zInvestigationsActions' && $Profile.Name != 'Coles Safety Profile'), true, false)
+                                                    )
+                                            )
+                                        )
+                                    )
+                                )
+                            )}">
+                </apex:variable>
+                -->
+                <apex:variable var="showLnk" 
+                    value="{!IF(Incident__c.Injury_or_Illness__c && crumb.Page__c=='zInvolvedPerson', true,
+                                IF(Incident__c.Injury_or_Illness__c && crumb.Page__c=='zInjury', true,
+                                    IF(((Incident__c.Other_Incident__c && Incident__c.Type__c!='Contractor' && crumb.Page__c=='zOtherIncident') || ((Incident__c.Type__c=='Car Wash' || Incident__c.Type__c=='Crime' || Incident__c.Type__c=='Threatening Situation' || Incident__c.Type__c=='Vehicle' || Incident__c.Type__c=='Co-Tenant'|| Incident__c.Type__c=='Property, Plant & Equipment' || Incident__c.Type__c=='Contractor') && crumb.Page__c=='zInvolvedPerson')), true,
+                                            IF(Incident__c.Escalated__c && crumb.Page__c=='zIncidentEscalation' && showSafety, true,
+                                                    IF(crumb.Page__c=='zCoding' && showCID, true,
+                                                        IF(crumb.Page__c=='zIncidentSummary' || (crumb.Page__c=='zIncidentSeverity' && Incident__c.Hazard__c == false) || crumb.Page__c=='zInvestigationsActions', true, false)
+                                                    )
+                                                
+                                            )
+                                        
+                                    )
+                                )
+                            )}">
+                </apex:variable>
+                <!-- Previous and Next Links 
+                    - Variable showLnk would tell us whether a given crumb is relevant to the incident record or not
+                    - Checking against 'blank' would ensure that the prevLnk or nextLnk is assigned only once a value
+                    - Checking against the current page sequence would allow us to pick the right page for a given incident
+                -->
+                <apex:variable var="nextLnk"
+                    value="{!IF(showLnk && nextLnk == 'blank' && crumb.Sequence__c > thisPage.Sequence__c, crumb.Page__c, nextLnk)}">
+                </apex:variable>
+                <apex:variable var="prevLnk"
+                    value="{!IF(showLnk && crumb.Sequence__c < thisPage.Sequence__c, crumb.Page__c, prevLnk)}">
+                </apex:variable>
+                
+                <p class="debug"> 
+                    Current page sequence = {!thisPage.Sequence__c} --- crumb sequence = {!crumb.Sequence__c} --- crumb page = {!crumb.Page__c} -- show lnk = {!showLnk} -- prev page = {!prevLnk} -- next page = {!nextLnk} -- Injury checkbox = {!Incident__c.Injury_or_Illness__c}
+                </p>
+    
+                <!-- Certain pages have a different apex page -->
+                <apex:variable var="pageHREF"
+                    value="{!IF(crumb.Page__c=='Hazard' || crumb.Page__c=='Regulatory_Compliance' || crumb.Page__c=='Near_Miss',
+                                    'zdynamic?id=' + Incident__c.id + '&type=' + SUBSTITUTE(crumb.Page__c, '_', ' '),
+                                        crumb.page__c + '?id=' + Incident__c.id)}">
+                </apex:variable>
+    
+                <!-- Bread crumbs have to work on a Site, Community as well as Service Cloud Console -->
+                <apex:variable var="pageHREF"
+                    value="{!IF($Profile.Name == 'Coles Safety Profile',
+                                SiteBase + pageHREF,
+                                IF(NOT(ISNULL($Currentpage.parameters.isdtp)),
+                                    '/apex/' + pageHREF + '&isdtp=' + $Currentpage.parameters.isdtp,
+                                    '/apex/' + pageHREF))}">
+                </apex:variable>
+                
+                <!-- Bread crumbs formation happens here -->
+                
+                <!-- While cloning do not display links on Incident Summary -->
+                <apex:variable var="displayText" value="{!OR(ISNULL(Incident__c.id), $CurrentPage.parameters.clone=='1')}"></apex:variable>
+                
+                <apex:outputPanel layout="inline" styleClass="{!lnkStyle}" rendered="{!showLnk}">
+                    <apex:outputText value=">>" styleClass="sep" rendered="{!crumb.Sequence__c > 1}"></apex:outputText>
+                    <apex:outputText value="{!crumb.Breadcrumb__c}" rendered="{!displayText}"></apex:outputText>
+                    <apex:outputPanel rendered="{!NOT(displayText)}">
+                        <a href="{!pageHREF}" class="crumb">{!crumb.Breadcrumb__c}</a> <!-- Do not use apex:outputLink, it will not open the crumbs properly in Service Cloud Console -->
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            </apex:repeat> 
+            <br/><br/>
+    
+            <!-- When an incident is being cloned or created, there is no incident id so it is cleaner to have the incident id be set in save method 
+                so appened only the page name and the 'type' parameter. When type is not relevant, add a dummy parameter -->
+            <apex:variable var="nextLnk"
+                value="{!IF(nextLnk=='Hazard' || nextLnk=='Regulatory_Compliance' || nextLnk=='Near_Miss',
+                                'zdynamic?type=' + SUBSTITUTE(nextLnk, '_', ' '),
+                                    nextLnk + '?1=1')}">
+            </apex:variable>
+            <apex:variable var="prevLnk"
+                value="{!IF(prevLnk=='Hazard' || prevLnk=='Regulatory_Compliance' || prevLnk=='Near_Miss',
+                                'zdynamic?type=' + SUBSTITUTE(prevLnk, '_', ' '),
+                                    prevLnk + '?1=1')}">
+            </apex:variable>
+            <!-- Links have to work on a Site, Community as well as Service Cloud Console -->
+            <apex:variable var="nextLnk"
+                value="{!IF($Profile.Name == 'Coles Safety Profile',
+                            SiteBase + nextLnk,
+                                IF(NOT(ISNULL($Currentpage.parameters.isdtp)),
+                                    '/apex/' + nextLnk + '&isdtp=' + $Currentpage.parameters.isdtp,
+                                    '/apex/' + nextLnk))}">
+            </apex:variable>
+            <apex:variable var="prevLnk"
+                value="{!IF($Profile.Name == 'Coles Safety Profile',
+                            SiteBase + prevLnk,
+                                IF(NOT(ISNULL($Currentpage.parameters.isdtp)),
+                                    '/apex/' + prevLnk + '&isdtp=' + $Currentpage.parameters.isdtp,
+                                    '/apex/' + prevLnk))}">
+            </apex:variable>
+            <apex:variable var="attachmentLnk"
+                value="{!IF($Profile.Name == 'Coles Safety Profile',
+                            SiteBase + 'zIncidentAttachments',
+                                IF(NOT(ISNULL($Currentpage.parameters.isdtp)),
+                                    '/apex/' + 'zIncidentAttachments' + '?isdtp=' + $Currentpage.parameters.isdtp,
+                                    '/apex/' + 'zIncidentAttachments'))}">
+            </apex:variable>
+            <p class="debug">
+                prevLnk - {!prevLnk} ~~~ nextLnk - {!nextLnk}
+            </p>    
+            <!-- SECTION HEADER, PAGE MESSAGES and BUTTONS -->
+            <apex:form id="frmIncidentWizard">
+                <apex:pageBlock id="section1" 
+                        title="{!IF($CurrentPage.parameters.clone == '1', 'Cloning from', '')} Incident Number {!Incident__c.Name}">
+                    <apex:pageBlockButtons >
+                        <apex:outputPanel id="pgButtons" layout="block">
+                            <div class="buttonContainer">
+                                <div class="buttonLeft">
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" value="< Previous" rendered="{!thisPage.Sequence__c != 1}" style="text-decoration: none" styleClass="btn" onclick="disablePgButtons();" oncomplete="enablePgButtons();">
+                                        <apex:param name="q" value="{!prevLnk}" assignTo="{!redirectURL}"></apex:param>
+                                    </apex:commandLink>
+                                </div>
+                                <div class="buttonRight">
+                                    <!-- nextLnk will retain its original value i.e. blank if there are no more pages to show -->
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" value="Next >" rendered="{!NOT(CONTAINS(nextLnk, '/blank'))}" style="text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();">
+                                        <apex:param name="q" value="{!nextLnk}" assignTo="{!redirectURL}"></apex:param>
+                                    </apex:commandLink>
+                                    <!-- Clone is visible on last page of the wizard for internal users -->
+                                    <!-- Business wants the clone button taken off the wizard for the moment                                     
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard" value="Clone Incident" style="margin-left:10px; text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();"
+                                        rendered="{!((thisPage.Page__c == 'zInvestigationsActions' && NOT(showCID)) || thisPage.Page__c == 'zCoding')}">
+                                        <apex:param name="q" value="{!URLFOR($Action.Incident__c.Clone, Incident__c.Id)}" assignTo="{!redirectURL}"></apex:param>
+                                    </apex:commandLink>
+                                    -->  
+                                    <!-- LJ 30/6/2015: Closure now happens automatically so inactivated the Close button                                  
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard" value="Close Incident" style="margin-left:10px; text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();"
+                                        rendered="{!((thisPage.Page__c == 'zInvestigationsActions' && NOT(showCID)) || thisPage.Page__c == 'zCoding')}">
+                                        <apex:param name="s" value="Closed" assignTo="{!Incident__c.Status__c}"></apex:param>
+                                        <apex:param name="f" value="true" assignTo="{!submissionFlag}"></apex:param>
+                                    </apex:commandLink>
+                                    -->
+                                    <!-- Force.com Site will show a Finish button on the last page -->
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" value="Finish" rendered="{!nextLnk == SiteBase + 'blank?1=1'}" style="text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();">
+                                        <apex:param name="q" value="{!SiteBase}zSubmissionPage?id={!Incident__c.Id}" assignTo="{!redirectURL}"></apex:param>
+                                    </apex:commandLink>
+                                </div>
+                                <center>
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" value="Save & Exit" rendered="{!$Profile.Name != 'Coles Safety Profile'}" style="text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();"/>
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: none; margin-left:10px" height="14px" alt="Loading..."/>                                    
+                                    <apex:commandLink action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" value="Add Files/Links" style="margin-left:10px; text-decoration: none" styleClass="btn"  onclick="disablePgButtons();" oncomplete="enablePgButtons();">
+                                        <apex:param name="q" value="{!attachmentLnk}" assignTo="{!redirectURL}"></apex:param>
+                                    </apex:commandLink>
+                                </center>
+                            </div>                        
+                        </apex:outputPanel>
+                    </apex:pageBlockButtons>
+                    
+                    <apex:insert name="content"/>
+                    
+                </apex:pageBlock>
+                <apex:outputpanel id="Messages">
+                    <apex:pageMessages />
+                </apex:outputpanel>
+                <apex:actionFunction name="saveChanges" action="{!saveRecord}" rerender="frmIncidentWizard,scriptActions" oncomplete="enablePgButtons();">
+                    <apex:param name="q" value="" assignTo="{!redirectURL}"></apex:param>
+                </apex:actionFunction>                
+            </apex:form>
+        </apex:sectionHeader>    
+    </apex:outputpanel>
+    <script type="text/javascript">
+        var $j = jQuery.noConflict();
+        $j(document).ready(function(){
+            $j("a.crumb").click(function(event){
+                disablePgButtons();
+                event.preventDefault();
+                saveChanges($j(this).attr('href'));
+            });
+        });
+        // This is how we communicate to the user that there is some processing happening
+        // Disable and Enable the Anchor tags, optionally show a loading icon but havent figured it out
+        function disablePgButtons(){
+            $j("div[id*=pgButtons] a")
+                .removeClass('btn')
+                .css('cursor', 'default')
+                .css('color', 'lightgrey');
+            $j("div[id*=pgButtons] img").show();
+        }
+        function enablePgButtons(){
+            $j("div[id*=pgButtons] a")
+                .addClass('btn')
+                .css('cursor', 'auto')
+                .css('color', 'auto');
+            $j("div[id*=pgButtons] img").hide();
+        }
+    </script>
+</apex:page>

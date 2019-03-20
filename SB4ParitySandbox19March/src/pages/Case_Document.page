@@ -1,0 +1,112 @@
+<apex:page standardController="Case__c" showHeader="false" renderAs="pdf" applyBodyTag="false" extensions="CaseCommentsController">
+
+    <!-------------------------------------------------------------
+    Author:        Lok Jackson
+    Company:       Salesforce.com
+    Description:   Generates a Case Summary in PDF format for printing or sending to external parties
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    ------------------------------------------------------------>
+
+    <head>
+        <style>
+            body { padding:5px; font-family: Arial Unicode MS; font-size: 11pt;}    
+        </style>
+    </head>
+    
+    <body>
+    <div id="container" style="width:100%">
+
+        <div id="header" style="background-color:#B0C4DE;">
+            <h2 style="margin-bottom:0;">Case Summary</h2>
+        </div>
+        
+        <div id="subHeader1" style="background-color:#B0C4DE;">
+            <h3 style="margin-bottom:0;">Overview</h3>
+        </div>
+        <div id="overviewCol1" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Case Number:</strong>&nbsp;<apex:outputText value="{!Case__c.Name}"/><br/>
+            <strong>Case Type:</strong>&nbsp;<apex:outputText value="{!Case__c.Case_Type_3__r.Name}"/><br/>
+            <strong>Created Date:</strong>&nbsp;<apex:outputField value="{!Case__c.CreatedDate}"/><br/>
+        </div>   
+        <div id="overviewCol2" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Case Owner:</strong>&nbsp;<apex:outputText value="{!Case__c.Owner.Name}"/><br/>
+            <strong>Priority:</strong>&nbsp;<apex:outputText value="{!Case__c.Priority__c}"/><br/>
+            <strong>Status:</strong>&nbsp;<apex:outputText value="{!Case__c.Status__c}"/><br/>
+        </div>
+        <div id="summaryCol1" style="background-color:#EEEEEE;width:100%;clear:both;">
+            <strong>Last Activity:</strong>&nbsp;<apex:outputText value="{!Case__c.Last_Activity__c}"/><br/>
+            <strong>Case Summary:</strong>&nbsp;<apex:outputText value="{!Case__c.Case_Summary__c}"/><br/>
+            <strong>EBA:</strong>&nbsp;<apex:outputText value="{!Case__c.EBA__c}"/><br/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/>
+        <div id="subHeader2" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Caller</h3>
+        </div>
+        <div id="callerCol1" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Caller Name:</strong>&nbsp;<apex:outputText value="{!Case__c.Caller__r.Name}"/><br/>
+            <strong>Caller Type:</strong>&nbsp;<apex:outputText value="{!Case__c.Caller_Type__c}"/><br/>
+        </div>   
+        <div id="callerCol2" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Caller Position:</strong>&nbsp;<apex:outputText value="{!Case__c.Caller_Position__c}"/><br/>
+            <strong>Contact Number:</strong>&nbsp;<apex:outputField value="{!Case__c.Site__r.Phone}"/><br/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/>   
+        <div id="subHeader3" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Team Member</h3>
+        </div>
+        <div id="teamMemberCol1" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Team Member Name:</strong>&nbsp;<apex:outputText value="{!Case__c.Contact__r.Name}"/><br/>
+            <strong>Team Member Position:</strong>&nbsp;<apex:outputText value="{!Case__c.Position__c}"/><br/>
+        </div>   
+        <div id="teamMemberCol2" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Hire Date:</strong>&nbsp;<apex:outputField value="{!Case__c.Hire_Date_Re_Hire_Date__c}"/><br/>
+            <strong>Date Last Worked:</strong>&nbsp;<apex:outputField value="{!Case__c.Date_Last_Worked__c}"/><br/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/>
+        <div id="subHeader4" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Site</h3>
+        </div>
+        <div id="siteCol1" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Site:</strong>&nbsp;<apex:outputText value="{!Case__c.Account__r.Name}"/><br/>
+            <strong>Brand:</strong>&nbsp;<apex:outputText value="{!Case__c.Account__r.Brand__c}"/><br/>
+            <strong>Sub-Brand:</strong>&nbsp;<apex:outputText value="{!Case__c.Account__r.Sub_Brand__c}"/><br/>
+        </div>   
+        <div id="siteCol2" style="background-color:#EEEEEE;width:50%;float:left;">
+            <strong>Site Manager:</strong>&nbsp;<apex:outputText value="{!Case__c.Site_Manager__c}"/><br/>
+            <strong>HR Business Partner:</strong>&nbsp;<apex:outputText value="{!Case__c.Site_HR_Business_Partner__c}"/><br/>
+            <strong>Regional/Area Manager:</strong>&nbsp;<apex:outputText value="{!Case__c.Site_Regional_Manager__c}"/><br/>
+        </div>
+        <div id="siteCol1" style="background-color:#EEEEEE;width:100%;clear:both;">
+            <strong>Site Location:</strong>&nbsp;<apex:outputText value="{!Case__c.Site_Location__c}"/><br/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/> 
+        <div id="subHeader5a" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Draft Notes</h3>
+        </div>
+        <div id="draftNotes" style="background-color:#EEEEEE;width:100%;float:left;">
+            <apex:outputText value="{!Case__c.New_Notes__c}" escape="false"/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/> 
+        <div id="subHeader5" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Case Notes</h3>
+        </div>
+        <div id="notes" style="background-color:#EEEEEE;width:100%;float:left;">
+            <apex:outputText value="{!rawNotes}" escape="false"/>
+        </div>
+        <div style="background-color:white;width:100%;clear:both;"/> 
+        <div id="subHeader6" style="background-color:#B0C4DE;width:100%;clear:both;">
+            <h3 style="margin-bottom:0;">Attachments</h3>
+        </div>
+        <div id="notes" style="background-color:#EEEEEE;width:100%;float:left;">
+            <apex:outputText value="{!attachments}" escape="false"/>
+        </div>
+    </div>
+    </body>
+    
+    <apex:form >
+        <apex:inputHidden value="{!Case__c.Case_Notes__c}"/>
+        <apex:inputHidden value="{!Case__c.New_Notes__c}"/>
+    </apex:form>
+</apex:page>

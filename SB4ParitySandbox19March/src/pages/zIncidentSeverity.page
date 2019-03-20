@@ -1,0 +1,183 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard" docType="html-5.0">
+<!-------------------------------------------------------------
+    Author:        Rohit Kumar,Lok Jackson
+    Company:       Salesforce.com 
+    Description:   Incident Severity Page
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    18-Jun-15   Rohit,Lok               Initial Version - Ported functionality from existing wizard pages
+    ------------------------------------------------------------>
+    <style type="text/css">
+ 
+         .hoverbox{
+            display:none;
+            width:100px;
+            height:100px;
+            color:#000;
+            background:#ccc;
+            position:absolute;    
+            }
+        .text{
+            width:100px;
+            height:100px;
+            background:#000;      
+            }
+        .hidden{
+            display:none;
+        }    
+    </style>
+    <apex:composition template="zIncidentWizard">
+        <apex:define name="content">
+              <apex:pageMessages />
+              <apex:actionRegion >
+                <apex:pageBlockSection columns="1" id="pageBlock"> 
+                    <apex:inputField styleClass="emergencyServices" value="{!Incident__c.Did_Emergency_Services_Attend__c}" required="{!Incident__c.Validate__c}">
+                        <apex:actionSupport event="onchange" status="typeStatus" rerender="panel">
+                            <apex:actionStatus id="typeStatus">
+                                <apex:facet name="start">
+                                        <apex:image value="{!URLFOR($Resource.loading)}" 
+                                            style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:actionSupport>
+                    </apex:inputField>
+                  </apex:pageblocksection>
+                  </apex:actionRegion>
+                  
+                  <apex:pageBlockSection columns="1" id="mainPanel">        
+                    <apex:outputPanel id="panel">
+                       <apex:actionRegion >
+                        <apex:pageBlockSection rendered="{!if(Incident__c.Did_Emergency_Services_Attend__c='Yes',true,false)}">
+                            <apex:inputField styleClass="serviceType" value="{!Incident__c.Type_of_Emergency_Service__c}">
+                                <apex:actionSupport event="onchange" status="emergencyServices" rerender="panel"> 
+                                    <apex:actionStatus id="emergencyServices">
+                                        <apex:facet name="start">
+                                            <apex:image value="{!URLFOR($Resource.loading)}"
+                                                  style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:actionSupport>
+                            </apex:inputField>
+                            </apex:pageBlockSection>
+                            
+                            <apex:pageBlockSection rendered="{!if(AND(Incident__c.Did_Emergency_Services_Attend__c=='Yes',isAmbulance),true,false)}">
+                             <apex:inputField styleClass="injuredPerson" value="{!Incident__c.Was_the_Injured_Person_Taken_To_Hospital__c}">
+                                <apex:actionSupport event="onchange" status="emergencyServicesAttend" rerender="panel">
+                                    <apex:actionStatus id="emergencyServicesAttend">
+                                        <apex:facet name="start">
+                                             <apex:image value="{!URLFOR($Resource.loading)}"
+                                                  style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:actionSupport>
+                             </apex:inputField>
+                        </apex:pageBlockSection>
+                        
+                        <apex:pageBlockSection rendered="{!if(AND(Incident__c.Did_Emergency_Services_Attend__c=='Yes',Incident__c.Type_of_Emergency_Service__c!='',Incident__c.Was_the_Injured_Person_Taken_To_Hospital__c=='Yes'),true,false)}">
+                            <apex:inputField styleClass="hospitalName" value="{!Incident__c.Which_Hospital__c}"/>
+                        </apex:pageBlockSection>
+                        </apex:actionRegion>
+                    </apex:outputPanel>
+                    
+                    <apex:pageBlockSection columns="1">
+                    
+                            <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                            <apex:inputField styleClass="seriousInjury" value="{!Incident__c.If_this_is_a_serious_Injury_or_event_as__c}" label="Is this a fatality, serious injury or dangerous event as defined below?" required="{!Incident__c.Validate__c}">
+                                <apex:actionSupport event="onchange" status="seriousInjury" rerender="mainPanel,scripPanel" oncomplete="addHeaders();">
+                                            <apex:actionStatus id="seriousInjury">
+                                                <apex:facet name="start">
+                                                     <apex:image value="{!URLFOR($Resource.loading)}"
+                                                          style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                                </apex:facet>
+                                            </apex:actionStatus>
+                                        </apex:actionSupport>
+                            </apex:inputField>
+                         </div>
+                    </apex:pageBlockSection>
+                    
+                    <apex:pageBlockSection id="message">
+                    <apex:pageBlockSectionItem rendered="{!IF(Incident__c.If_this_is_a_serious_Injury_or_event_as__c == 'Yes', true, false)}">
+                        <span style="font-weight:bold;color:red;">{!$Label.Please_Select_Injury_or_Event} </span>
+                    </apex:pageBlockSectionItem>
+                    </apex:pageBlockSection>
+                            
+                    <apex:pageBlockSection columns="1" rendered="{!IF(Incident__c.If_this_is_a_serious_Injury_or_event_as__c == 'No', false, true)}" id="radio">
+                    <apex:selectRadio value="{!Incident__c.Injury_Code__c}" layout="pageDirection" id="container">
+ 
+                            <apex:selectOption itemvalue="F1" itemlabel="{!$Label.F1}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI1"  itemlabel="{!$Label.SI1}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI2"  itemlabel="{!$Label.SI2}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI3"  itemlabel="{!$Label.SI3}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI4"  itemlabel="{!$Label.SI4}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI5"  itemlabel="{!$Label.SI5}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI6"  itemlabel="{!$Label.SI6}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI7"  itemlabel="{!$Label.SI7}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI8"  itemlabel="{!$Label.SI9}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI9"  itemlabel="{!$Label.SI12}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SI10"  itemlabel="{!$Label.SI13}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SIO1"  itemlabel="{!$Label.SI8}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SIO2"  itemlabel="{!$Label.SI10}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="SIO3"  itemlabel="{!$Label.SI11}" rendered="{!Incident__c.Injury_or_Illness__c}"/>
+                            <apex:selectOption itemValue="DE1"  itemlabel="{!$Label.DE1}" id="Event1"/>
+                            <apex:selectOption itemValue="DE2"  itemlabel="{!$Label.DE2}"/>
+                            <apex:selectOption itemValue="DE3"  itemlabel="{!$Label.DE3}"/>
+                            <apex:selectOption itemValue="DE4"  itemlabel="{!$Label.DE4}"/>
+                            <apex:selectOption itemvalue="DE5" itemlabel="{!$Label.DE5}"/>
+                            <apex:selectOption itemValue="DE6" itemlabel="{!$Label.DE6}"/>
+                            <apex:selectOption itemValue="DE7" itemlabel="{!$Label.DE7}"/>
+                            <apex:selectOption itemValue="DE8" itemlabel="{!$Label.DE8}"/>
+                            <apex:selectOption itemValue="DE9" itemlabel="{!$Label.DE9}"/>
+                            <apex:selectOption itemValue="DE10" itemlabel="{!$Label.DE10}" rendered="{!if(Incident__c.Brand__c == 'Coles Express',true,false)}"/>
+                            <apex:selectOption itemValue="DE11" itemlabel="{!$Label.DE11}" rendered="{!if(Incident__c.Brand__c == 'Coles Express',true,false)}"/>
+                            <apex:selectOption itemValue="DE12" itemlabel="{!$Label.DE12}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE13" itemlabel="{!$Label.DE13}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE14" itemlabel="{!$Label.DE14}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE15" itemlabel="{!$Label.DE15}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE16" itemlabel="{!$Label.DE16}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE17" itemlabel="{!$Label.DE17}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE18" itemlabel="{!$Label.DE18}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE19" itemlabel="{!$Label.DE19}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            <apex:selectOption itemValue="DE20" itemlabel="{!$Label.DE20}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                   </apex:selectRadio>
+                   </apex:pageBlockSection>
+                   
+                </apex:pageBlockSection>
+                <apex:inputHidden value="{!Incident__c.Validate__c}"/>
+                <apex:inputhidden value="{!Incident__c.Injury_or_Illness__c}" id="hidden"/>
+                <apex:inputHidden value="{!Incident__c.Pages_Complete__c}"/>
+                  <apex:actionFunction name="reRenderBreadCrumbs" reRender="Breadcrumbs, pgButtons" oncomplete="enableIncidentTypes(); enablePgButtons();"/>
+                   <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css"/>
+                    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+                    <script src="https://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+                     <apex:outputPanel id="scriptPanel">
+                        <script>
+                      var $j = jQuery.noConflict();
+                      $j(document).ready(function () {
+                            // Function code here.
+                            //console.log('hi');
+                            //console.log($j("input[value*='6']").after());
+                            addHeaders();
+                           //console.log('done');
+                        });
+                        function addHeaders(){
+                            
+                            $j("#sev1").remove();
+                            $j("#sev2").remove();
+                            $j("#sev22").remove();
+                            $j("#sev3").remove();
+                            if($j("input[id *='hidden'").val()){
+                            
+                            $j("input[Value ='F1'").before('<div id="sev1"><b>Severity 1 - Fatality</b><br/></div>');
+                            }
+                            
+                            $j("input[value ='SI1']").before('<div id="sev2"><b>Severity 2 - Serious Injury, Immediate Treatment</b><br/></div>');
+                            $j("input[value ='SIO1']").before('<div id="sev22"><b>Severity 2 - Serious Injury, Other</b><br/></div>'); 
+                            $j("input[value='DE1']").before('<div id="sev3"><b>Severity 3 - Dangerous Event</b><br/></div>');
+                        }
+                     </script> 
+                    </apex:outputPanel> 
+        </apex:define>
+       </apex:composition>
+</apex:page>

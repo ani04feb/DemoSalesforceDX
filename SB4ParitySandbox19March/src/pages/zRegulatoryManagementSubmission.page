@@ -1,0 +1,6 @@
+<apex:page controller="zRegulatoryManagement">
+ <apex:form >
+    <p>{!$Label.Regulatory_Management_Submission_Message}</p>
+    <apex:commandLink action="/apex/zIncidentSelection" value="Click Here"/>
+ </apex:form>
+</apex:page>

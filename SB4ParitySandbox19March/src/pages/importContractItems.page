@@ -1,0 +1,379 @@
+<apex:page controller="importContractItemsController" title="Import Contract Items">
+    
+    <style>
+    #drop {
+    border:2px dashed #bbb;
+            -moz-border-radius:5px;
+            -webkit-border-radius:5px;
+            border-radius:5px;
+            padding:25px;
+            text-align:center;
+            font: 16pt bold Arial, Helvetica, sans-serif;
+            color: #6495ED;
+        width: 95%;
+        background: #F0FFFF;
+    
+    
+        //display: inline-block; 
+        }
+        
+        #messages {
+    border:2px solid #bbb;
+            -moz-border-radius:5px;
+            -webkit-border-radius:5px;
+            border-radius:5px;
+            padding:25px;
+            text-align:left;
+            font: 12pt Arial, Helvetica, sans-serif;       
+        width: 95%;
+    
+    
+        //display: inline-block; 
+        }
+    
+    </style>
+    
+    <h1>
+         Import Contract Items from Excel
+    </h1>
+    
+    <div id="drop">
+        <b>Drag &amp; Drop Excel file here&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</b>  <br /><br />or 
+        
+        Select File: <input type="file" id="file-input" onclick="this.value=null;" value="Import from Excel"/>
+    </div>
+    <div id="sample">
+        <h2>Sample Input File: </h2>
+        <a href="/apex/exportContractItems_CSV" onclick="window.open(this.href, '_blank', 'height=500, width=500'); return false;" onkeypress="window.open(this.href, '_blank', 'height=500, width=500'); return false;">Download</a>
+        
+    </div>
+    
+    <!-- // commented out. Use the browser back button instead
+        //apex:form ><apex:commandButton id="backbutton" value="Back" onclick="history.go(-1);"/></apex:form
+        //-->
+    
+     <div id="messages">
+        
+           
+      
+        
+    </div>
+    
+    
+    
+    <script src="{!URLFOR($Resource.SheetJS, 'dist/xlsx.core.min.js')}"></script>
+    
+    <script>
+ 
+function process_wb(wb_data) {
+        
+
+    var iCount = 0;
+    var iErrorCount = 0;
+    var iTotalRows = wb_data.length;
+        
+        writeMessage('<b><u>Import Start...</u></b><br/>');
+        
+        console.log(wb_data);
+        
+    for (var iRow = 0; iRow < iTotalRows; iRow++) {
+            
+        var sContractName = "";
+        var sColesItemNumber = "";
+        var sDescription = "";
+        var sNetCost = "";
+        var sGST = "";
+        var sVolume = "";
+        var sVolumeType = "";
+        var sArtworkCost = "";
+        var sArtworkSuppliedBy ="";
+        var sIP = "";
+        var sCertReq="";
+        var sExclRights="";
+        var sExclTerritory="";
+        
+        
+        for (var prop in wb_data[iRow])
+        { 
+            
+           
+            switch(prop){
+                    
+                case "Contract Name":
+                
+                    sContractName = wb_data[iRow][prop];                            
+                    break;
+            
+                case "Product Name, Description, Size, State/DC (if applicable)":
+                
+                    sDescription = wb_data[iRow][prop];                            
+                    break;
+                   
+                case "Coles Item Number":
+                    sColesItemNumber = wb_data[iRow][prop];                             
+                    break;
+                    
+                case "Net Cost/Unit (excl GST)":
+                    sNetCost = wb_data[iRow][prop];                          
+                    break;
+                    
+                case "GST?":
+                    sGST = wb_data[iRow][prop];
+                    break;
+                    
+                case "Volume/Units":
+                    sVolume =  wb_data[iRow][prop];
+                    break;
+                    
+                case "Volume Type":
+                    sVolumeType = wb_data[iRow][prop];
+                    break;
+                    
+                case "Artwork Cost":
+                    sArtworkCost = wb_data[iRow][prop];
+                    break;
+                    
+                case "Artwork Cost Paid By":
+                    sArtworkSuppliedBy = wb_data[iRow][prop];
+                    break;
+                    
+                case "Intellectual Property":
+                    sIP = wb_data[iRow][prop];
+                    break;
+                    
+                case "Certification Requriement":
+                    sCertReq = wb_data[iRow][prop];
+                    break;
+                    
+                case "Exclusivity Rights":
+                    sExclRights = wb_data[iRow][prop];
+                    break;
+                    
+                case "Exclusivity Rights Territory":
+                    sExclTerritory = wb_data[iRow][prop];
+                    break;
+                 
+                default:
+                    alert("Error: Unknown Column Name: " + prop);
+                    return;
+                    break;
+                    
+                } // end switch
+                
+            } // end for each variable
+        
+        // process row
+
+        importContractItemsController.upsertItem( 
+         sContractName,
+         sColesItemNumber,
+         sDescription ,
+         sNetCost ,
+         sGST ,
+         sVolume ,
+         sVolumeType ,
+         sArtworkCost ,
+         sArtworkSuppliedBy,
+         sIP,
+         sCertReq,
+         sExclRights,
+         sExclTerritory,
+         
+            function handleUpsertResult(result, event)
+            {
+                iCount++;
+                
+                //check for errors
+                if (result.indexOf('ERROR') >-1)
+                {
+                    iErrorCount++;
+                    
+                }
+                if (event.status) {
+             
+                    writeMessage(result);
+                  
+                }
+                else {
+                    
+                    console.log('message: ' + event.message);
+                    writeMessage('Error: ' + event.message);
+                }
+                
+                if (iCount == iTotalRows)
+                    {
+                        
+                        writeMessage('<br/><b><u>Import Complete with ' + iErrorCount + ' ERRORS</u></b><br/>');
+                    }
+                
+                    
+                
+                
+                
+            }
+            
+            
+        );
+        
+    } // end for each row
+        
+    
+    
+}
+    
+    
+    
+        
+    function writeMessage(sMsg)
+    {
+        var DivMessage = document.getElementById('messages');
+
+        DivMessage.innerHTML = DivMessage.innerHTML + sMsg + '<br/>';
+    }
+
+   
+    
+    
+    
+
+    
+    // to_json
+    // Converts the contents of 1st worksheet to an array of JSON objects
+    function to_json(workbook) {
+    
+        var sheet0Name = workbook.SheetNames[0];
+        var worksheet = workbook.Sheets[sheet0Name];
+        
+        var roa = XLSX.utils.sheet_to_row_object_array(worksheet);
+            
+        return roa;
+    }
+    
+    
+
+    function fixdata(data) {
+        var o = "", l = 0, w = 10240;
+        for(; l<data.byteLength/w; ++l) o+=String.fromCharCode.apply(null,new Uint8Array(data.slice(l*w,l*w+w)));
+        o+=String.fromCharCode.apply(null, new Uint8Array(data.slice(l*w)));
+        return o;
+    }
+    
+    
+        
+    function readSourceFiles(sourcefiles){
+        
+        
+       
+                
+        var i,f;
+        for (i = 0, f = sourcefiles[i]; i !== sourcefiles.length; ++i) {
+            
+            
+            var reader = new FileReader();
+            var name = f.name;
+            
+            if (name.substring(name.lastIndexOf('.')) == ".csv") {
+                alert("Only .xls and .xlsx files are supported.");
+                return;
+            }   
+            else{
+
+
+            reader.onload = function(e) {
+                
+                
+                var data = e.target.result;
+                var wb;
+                var arr = fixdata(data);
+                
+                try
+                {
+                        
+                    if (name.substring(name.lastIndexOf('.')) == '.xls') {
+                                    
+                        wb = XLS.read(btoa(arr), { type: 'base64'} );
+                                    
+                    }
+                    else if (name.substring(name.lastIndexOf('.')) == '.xlsx') {
+                                
+                        wb = XLSX.read(btoa(arr), {type: 'base64'});
+                                    
+                    }
+                    else {
+                            alert("Only .xls and .xlsx files are supported.");
+                            return;
+                    }
+                     
+                    process_wb(to_json(wb));
+                  }
+                  catch(Err)
+                  {
+                       alert('Error: ' + Err.message);
+                  }
+                
+            };
+            
+            reader.readAsArrayBuffer(f);
+            }
+            
+                
+                
+        } // end for loop
+                
+      
+        
+        
+    }//end readSourceFiles()
+    
+        
+        
+    var drop = document.getElementById('drop');
+    
+    
+    // entry point for dropping excel files
+    function handleDrop(e) {
+    
+        e.stopPropagation();
+        e.preventDefault();
+
+        var files = e.dataTransfer.files;
+        readSourceFiles(files);
+        
+    }
+    
+    function handleDragover(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    }
+    
+    if(drop.addEventListener) {
+        drop.addEventListener('dragenter', handleDragover, false);
+        drop.addEventListener('dragover', handleDragover, false);
+        drop.addEventListener('drop', handleDrop, false);
+    }
+    
+    
+    
+    var fileinput = document.getElementById('file-input');
+    
+    if (fileinput.addEventListener){
+        fileinput.addEventListener('change', handleFileOpen, false);
+        }
+    
+    //entry point for opening file via file input box
+    function handleFileOpen(e)
+    {
+        readSourceFiles(e.target.files); 
+        fileinput.value = null;
+        
+    }
+    
+    
+    
+    
+        
+    </script>
+    
+    
+</apex:page>

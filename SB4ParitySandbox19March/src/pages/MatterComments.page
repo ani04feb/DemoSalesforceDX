@@ -1,0 +1,15 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="true" standardcontroller="Case__c" extensions="matterCommentsController">
+    <!--
+    <apex:form >
+    <apex:pageBlock >
+        <apex:pageBlockButtons >
+            <apex:commandButton action="{!saveRecord}" value="Save" />
+        </apex:pageBlockButtons>
+        <apex:pageBlockSection columns="1">
+            <apex:inputField value="{!Matter__c.New_Notes__c}" style="height:30px"/>
+            <apex:outputField value="{!Matter__c.Matter_Notes__c}" style="width=100%" />
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    </apex:form>
+    -->
+</apex:page>

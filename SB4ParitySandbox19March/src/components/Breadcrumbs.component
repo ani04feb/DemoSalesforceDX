@@ -1,0 +1,68 @@
+<apex:component controller="Breadcrumbs">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko
+    Company:       Salesforce.com
+    Description:   Used to display the progress bar to the user in the Incident Wizard process
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    20-Mar-14   Deepu               Initial Version - Crumbs, highlight of visited, current and next steps
+    26-Mar-14   Deepu               Made the links working in Console, Site and Community. Also added Involved Person crumb for Car Wash incidents
+    ------------------------------------------------------------>
+    <style>
+        span.sep { padding: 5px; }
+        span.present a { text-decoration: none; }
+        span.future a { color: grey; text-decoration: none; }
+        span.future { color: grey; }
+    </style>
+    <apex:repeat value="{!crumbs}" var="crumb">
+    
+        <!-- Link coloring depends on the position of it in the whole wizard step -->
+        <apex:variable var="lnkStyle" value="{!IF(crumb.sequence__c < seq, 'past',
+                                IF(crumb.sequence__c == seq, 'present', 'future') )}"></apex:variable>
+        
+        <!-- Certain links should be displayed only if corresponding incident type is selected -->
+        <apex:variable var="showLnk" 
+            value="{!IF(inc.Injury_or_Illness__c && crumb.Page__c=='Impacted_Person', true,
+                        IF(inc.Injury_or_Illness__c && crumb.Page__c=='Injury', true,
+                            IF(((inc.Other_Incident__c && crumb.Page__c=='OtherIncident') || (inc.Type__c=='Car Wash' && crumb.Page__c=='Impacted_Person')), true,
+                                IF(inc.Hazard__c && crumb.Page__c=='Hazard', true,
+                                    IF(inc.Regulatory_Compliance__c && crumb.Page__c=='Regulatory_Compliance', true,
+                                        IF(inc.Near_Miss__c && crumb.Page__c=='Near_Miss', true,
+                                            IF(crumb.Page__c=='Coding' && $Profile.Name == 'System Administrator', true,
+                                                IF(crumb.Page__c=='Incident_Summary' || crumb.Page__c=='Footer', true, false)
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )}">
+        </apex:variable>
+        
+        <!-- Certain pages have a differnt apex page -->
+        <apex:variable var="pageHREF"
+            value="{!IF(crumb.Page__c=='Hazard' || crumb.Page__c=='Regulatory_Compliance' || crumb.Page__c=='Near_Miss',
+                            'dynamic?id=' + inc.id + '&type=' + SUBSTITUTE(crumb.Page__c, '_', ' '),
+                                crumb.page__c + '?id=' + inc.id)}">
+        </apex:variable>
+        
+        <!-- Bread crumbs have to work on a Site, Community as well as Service Cloud Console -->
+        <apex:variable var="pageHREF"
+            value="{!IF($Profile.Name == 'Coles Safety Profile',
+                        '/colesservice1/' + pageHREF,
+                        IF($Currentpage.parameters.isdtp == 'vw',
+                            pageHREF + '&isdtp=vw',
+                            '/apex/' + pageHREF))}">
+        </apex:variable>
+        
+        <apex:outputPanel layout="inline" styleClass="{!lnkStyle}" rendered="{!showLnk}">
+            <apex:outputText value=">>" styleClass="sep" rendered="{!crumb.Sequence__c > 1}"></apex:outputText>
+            <apex:outputText value="{!crumb.Breadcrumb__c}" rendered="{!ISNULL(inc.id)}"></apex:outputText>
+            <!-- Do not use apex:outputLink, it will not open the crumbs properly in Service Cloud Console -->
+            <apex:outputPanel rendered="{!NOT(ISNULL(inc.id))}">
+                <a href="{!pageHREF}" class="crumb">{!crumb.Breadcrumb__c}</a>
+            </apex:outputPanel>
+        </apex:outputPanel>
+    </apex:repeat>
+</apex:component>

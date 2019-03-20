@@ -1,0 +1,279 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard" docType="html-5.0">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko, Lok Jackson, Kim Davies, Paul Fayle
+    Company:       Salesforce.com
+    Description:   Miscellanous (aka Footer) Last step of the wizard (w/o considering Coding)
+    Inputs:        Incident Id
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    26-Mar-14   Deepu               Initial Version
+    ------------------------------------------------------------>
+    <style>
+        .cell span {
+            padding: 5px;
+            display: inline-block;
+            width: 75px;
+        }
+        td.High span {
+            background-color: red !important;
+            color: white !important;
+        }
+        td.Medium span {
+            background-color: yellow !important;
+        }
+        td.Low span {
+            background-color: green !important;
+            color: white !important;
+        }
+        .riskHelp { display: none; }
+        .riskHelp ul {
+            margin: 0px;
+            padding: 5px;
+            width: 360px;
+            border: 1px solid orange;
+            background-color: lightgoldenrodyellow;
+        }
+        .riskHelp li {
+            font-weight: bold;
+        }
+        .riskHelp li p {
+            margin-top: 0px;
+            font-weight: normal;
+        }
+        .riskHelp ol {
+            font-weight: bold;
+            padding: 0px;
+            margin-bottom: 10px;
+        }
+        .riskHelp ol li {
+            list-style: none;
+            margin-left: 0px;
+            font-weight: normal;
+        }
+    </style>
+    <apex:composition template="zIncidentWizard">
+        <apex:define name="content">
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSection title="Plant/Equipment" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Plant_or_Equipment_Involved}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection title="Merchandise" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Merchandise_Involved}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSection title="External/Third Party Involved" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Third_Party_Fields}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+              
+            <apex:pageBlockSection title="Witness" columns="1" rendered="{!NOT(Incident__c.Is_Compliance_Only__c)}">
+                <apex:pageBlockTable value="{!Witnesses}" var="w" id="tblWitness">
+                    <apex:column headerValue="Type" width="15%">
+                        <apex:inputField value="{!w.Witness_Type__c}">
+                            <apex:actionSupport event="onchange" reRender="WitnessContact" status="typeStatus">
+                                <apex:actionStatus id="typeStatus">
+                                    <apex:facet name="start">
+                                            <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                    </apex:facet>
+                                </apex:actionStatus>
+                            </apex:actionSupport>
+                        </apex:inputField>
+                    </apex:column>
+                    <apex:column headerValue="Name" width="20%" >
+                        <apex:outputPanel id="WitnessContact">
+                            <apex:inputField value="{!w.Witness_Name__c}" rendered="{!(w.Witness_Type__c != 'Team Member')}"/>
+                            <apex:inputField value="{!w.Contact__c}" rendered="{!(w.Witness_Type__c == 'Team Member')}"/>
+                        </apex:outputPanel>
+                    </apex:column>
+                    <apex:column headerValue="Phone" width="10%" >
+                        <apex:inputField value="{!w.Witness_Phone_No__c}"></apex:inputField>
+                    </apex:column>
+                    <apex:column headerValue="Email" width="30%" >
+                        <apex:inputField value="{!w.Witness_Email__c}"></apex:inputField>
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:commandLink action="{!addNewWitnessRow}" reRender="tblWitness" status="witnessStatus">Add New Row
+                    <apex:actionStatus id="witnessStatus">
+                        <apex:facet name="start">
+                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                        </apex:facet>
+                    </apex:actionStatus>
+                </apex:commandLink>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection title="Risk" columns="2" rendered="{!NOT(Incident__c.Is_Compliance_Only__c)}">
+                <apex:pageBlockTable value="{!RiskMatrix}" var="Risk" id="tblRisk">
+                    <apex:facet name="caption">
+                        <span class="helpButton" id="likeHelp">
+                            <label style="font-weight: bold;">Likelihood</label>
+                            <img src="/s.gif" alt="" class="helpOrb" title=""/>
+                        </span>
+                    </apex:facet>
+                    <apex:column value="{!Risk.Severity__c}" style="font-weight:bold;">
+                        <apex:facet name="header">
+                            <span class="helpButton" id="sevHelp">
+                                <label style="font-weight: bold;">Severity</label>
+                                <img src="/s.gif" alt="" class="helpOrb" title=""/>
+                            </span>
+                        </apex:facet>
+                    </apex:column>
+                    <apex:column headerValue="Very Likely"   styleClass="cell {!Risk.Very_Likely__c}">
+                        <apex:actionSupport event="onclick" action="{!setRiskSeverity}" reRender="dummy">
+                            <apex:param name="RiskSeverity" value="{!Risk.Very_Likely__c}"></apex:param>
+                            <span><input type="radio" name="sev"></input>{!Risk.Very_Likely__c}</span>
+                        </apex:actionSupport>
+                    </apex:column>
+                    <apex:column headerValue="Likely"   styleClass="cell {!Risk.Likely__c}">
+                        <apex:actionSupport event="onclick" action="{!setRiskSeverity}" reRender="dummy">
+                            <apex:param name="RiskSeverity" value="{!Risk.Likely__c}"></apex:param>
+                            <span><input type="radio" name="sev"></input>{!Risk.Likely__c}</span>
+                        </apex:actionSupport>
+                    </apex:column>
+                    <apex:column headerValue="Unlikely"   styleClass="cell {!Risk.Unlikely__c}">
+                        <apex:actionSupport event="onclick" action="{!setRiskSeverity}" reRender="dummy">
+                            <apex:param name="RiskSeverity" value="{!Risk.Unlikely__c}"></apex:param>
+                            <span><input type="radio" name="sev"></input>{!Risk.Unlikely__c}</span>
+                        </apex:actionSupport>
+                    </apex:column>
+                    <apex:column headerValue="Very Unlikely"   styleClass="cell {!Risk.Very_Unlikely__c}">
+                        <apex:actionSupport event="onclick" action="{!setRiskSeverity}" reRender="dummy">
+                            <apex:param name="RiskSeverity" value="{!Risk.Very_Unlikely__c}"></apex:param>
+                            <span><input type="radio" name="sev"></input>{!Risk.Very_Unlikely__c}</span>
+                        </apex:actionSupport>
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:pageBlockSection id="RiskRating" title="Risk Rating" columns="1" >
+                    <apex:outputField value="{!Incident__c.Risk_Rating__c}" rendered="{!(Incident__c.Risk_Rating__c != '')}"/>
+                    <apex:inputField value="{!Incident__c.Referred_To_Risk_Assessment_Database__c}" />
+                </apex:pageBlockSection>
+             </apex:pageBlockSection>
+            
+            <apex:pageBlockSection title="Actions" columns="1">
+                <apex:pageBlockTable value="{!ActionTasks}" var="Action" id="tblAction">
+                    <apex:column headerValue="Type" width="10%">
+                        <apex:commandLink action="{!URLFOR($Action.Task.Edit, Action.Id, [cancelURL='/apex/zMiscellaneous?id=' + Incident__c.Id])}" value="Edit" rendered="{!$Profile.Name != 'Coles Safety Profile'}"
+                            style="padding-right: 5px; visibility: {!IF(ISNULL(Action.Id), 'hidden', 'visible')}"></apex:commandLink>
+                        <apex:selectList value="{!Action.Type}" size="1">
+                            <apex:selectOptions value="{!ActionItemTypes}"/>
+                        </apex:selectList>                    
+                    </apex:column>
+                    <apex:column headerValue="Action Details" width="50%">
+                        <apex:inputText value="{!Action.Subject}" style="width: 95%"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Due Date" width="10%">
+                        <apex:inputText value="{!Action.ActivityDate}"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Job Number" width="10%">
+                        <apex:inputText value="{!Action.JobNumber}" style="width: 95%"></apex:inputText>
+                    </apex:column>
+                    <apex:column headerValue="Assigned To" width="10%" title="Site Manager for {!Incident__c.Account__r.Name}">
+                        <apex:outputText value="{!Action.OwnerName}"></apex:outputText>
+                    </apex:column>
+                    <apex:column headerValue="Status" width="10%">
+                        <apex:selectList value="{!Action.Status}" size="1">
+                            <apex:selectOptions value="{!ActionItemStatuses}"/>
+                        </apex:selectList>                    
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:outputPanel >
+                    <apex:commandLink action="{!addNewActionRow}" reRender="tblAction" status="actionStatus">Add New Row
+                        <apex:actionStatus id="actionStatus">
+                            <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                            </apex:facet>
+                        </apex:actionStatus>
+                    </apex:commandLink>
+                    <apex:commandLink style="padding-left:5px;" action="{!saveAllActions}" reRender="tblAction" status="actionStatus">Save Changed Actions</apex:commandLink>
+                </apex:outputPanel>
+            </apex:pageBlockSection>
+     
+            <apex:pageBlockSection columns="1" title="Page Status">
+                <apex:inputField value="{!Incident__c.Page_8_Complete__c}" id="completedFlag"/>
+            </apex:pageBlockSection>
+
+            <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+                <apex:inputHidden value="{!Incident__c[typeField]}"/>
+            </apex:repeat>
+            
+            <apex:variable var="LikelihoodStatic" value="Considering how often people are exposed to the hazard, the chosen severity would be expected to occur "></apex:variable>
+            <div id="likeHelpContent" class="riskHelp">
+                <ul>
+                    <b>Likelihood </b>What is the chance of an incident occuring and the chosen severity being the outcome?
+                    <li>Very Likely<p>{!LikelihoodStatic}<b>most times</b>.</p></li>
+                    <li>Likely<p>{!LikelihoodStatic}<b>often</b>.</p></li>
+                    <li>Unlikely<p>{!LikelihoodStatic}<b>sometimes</b>.</p></li>
+                    <li>Very Unlikely<p>{!LikelihoodStatic}<b>hardly ever</b>.</p></li>
+                </ul>
+            </div>
+            <div id="sevHelpContent" class="riskHelp">
+                <ul>
+                    <b>Severity </b>What is the likely consequence/outcome that would result from the hazard?<br/>
+                    <li>
+                        <ol>Catastrophic
+                            <li>Death or permanent disability/illness</li>
+                            <li>Severe property and business less(eg explosion).</li>
+                            <li>Severe environmental damage (eg contaminants release).</li>
+                        </ol>
+                    </li>
+                    <li><ol>Major
+                        <li>Long-term illness or serious injury.</li>
+                        <li>Loss of business capability for greater than 1 day.</li>
+                        <li>Major property or environmental damage.</li>
+                    </ol></li>
+                    <li><ol>Moderate
+                        <li>Medical treatment or several days off work.</li>
+                        <li>Property damage resulting in some loss of business capability.</li>
+                        <li>Contaminant release contained without outside assistance.</li>
+                    </ol></li>
+                    <li><ol>Minor
+                        <li>First Aid treatment.</li>
+                    </ol></li>
+                </ul>
+            </div>
+            <script type="text/javascript">
+                var $j = jQuery.noConflict();
+                
+                $j(document).ready(function(){
+                    
+                    // Since this is a complex matrix, it makes sense to show both the help content instead of showing just one
+                    // Get the position of the table and its width and position the help content
+                    $j("#likeHelp, #sevHelp").mouseenter(function(){
+                        // Calculate the position and width of the Risk table
+                        var tblPos = $j("table[id*=tblRisk]").position();
+                        var tblWidth = $j("table[id*=tblRisk]").outerWidth();
+                        var tblHeight = $j("table[id*=tblRisk]").height();
+                        
+                        $j("#likeHelpContent").css({
+                            position: "absolute",
+                            top: tblPos.top + "px",
+                            left: (tblPos.left + tblWidth) + "px"
+                        }).show();
+                        
+                        $j("#sevHelpContent").css({
+                            position: "absolute",
+                            top: (tblPos.top + tblHeight + 15) + "px",      // +15 to factor in Firefox positioning
+                            left: tblPos.left + "px"
+                        }).show();
+                   });
+                   
+                   // Hide the help content for risk and severity after the user clicks on any of the page elements.
+                   $j(document).click(function(){
+                       $j("div[id*=HelpContent]").hide();
+                   })
+                });
+                
+            </script>
+        </apex:define>
+    </apex:composition>
+</apex:page>

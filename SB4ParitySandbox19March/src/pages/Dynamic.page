@@ -1,0 +1,59 @@
+<apex:page standardController="Incident__c" extensions="IncidentWizardController">
+    <style>
+        textarea {
+            width: 90%;
+            height: 75px;
+        }
+        input[type="text"] {
+            width: 75%;
+        }
+        .overrideWidth {    /* Date Time Fields */
+            width: auto !important;
+        }
+    </style>
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('{!$CurrentPage.parameters.type} Details');
+        }
+    </script>
+    <apex:sectionHeader title="{!$CurrentPage.parameters.type} Details">
+    <c:Breadcrumbs /><br/><br/>
+    <apex:form >
+        <apex:outputpanel id="Messages">
+            <apex:pageMessages />
+        </apex:outputpanel>
+        <apex:actionStatus startText="Saving..." id="saveStatus"/>
+        <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{!prevPage}"    value="< Previous"    style="margin-right: 100px"/>
+                <apex:commandButton action="{!save}"        value="Save"        rerender="Messages" status="saveStatus" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                <apex:commandButton action="{!cancel}"      value="Close"      immediate="true" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                <apex:commandButton action="{!nextPage}"    value="Next >"      style="margin-left: 100px"/>
+            </apex:pageBlockButtons>
+            <apex:pageBlockSection columns="1" Title="{!$CurrentPage.parameters.type} Information">
+            <!-- This page will be given a field set to display in the URL parameter, get a reference to the actual field set in the variable -->
+                <apex:variable var="FieldSetName" value="{!CASE($CurrentPage.parameters.type,
+                    'Hazard',                       $ObjectType.Incident__c.FieldSets.Hazard,
+                    'Regulatory Compliance',        $ObjectType.Incident__c.FieldSets.Regulatory_Compliance,
+                    'Near Miss',                    $ObjectType.Incident__c.FieldSets.Near_Miss,
+                                                    $ObjectType.Incident__c.FieldSets.Hazard)}"></apex:variable>            
+                                                
+                <apex:repeat value="{!FieldSetName}" var="f">
+                    <apex:inputField value="{!Incident__c[f]}" />
+                </apex:repeat>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" title="Page Status">
+                <apex:inputField label="Page Completed" value="{!Incident__c.Page_4_Complete__c}" id="completedFlagP4" rendered="{!$CurrentPage.parameters.type=='Hazard'}"/>
+                <apex:inputField label="Page Completed" value="{!Incident__c.Page_5_Complete__c}" id="completedFlagP6" rendered="{!$CurrentPage.parameters.type=='Near Miss'}"/>
+                <apex:inputField label="Page Completed" value="{!Incident__c.Page_6_Complete__c}" id="completedFlagP5" rendered="{!$CurrentPage.parameters.type=='Regulatory Compliance'}"/>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+            <apex:inputHidden value="{!Incident__c[typeField]}"/>
+        </apex:repeat>
+        <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+    </apex:form>
+    </apex:sectionHeader>
+</apex:page>

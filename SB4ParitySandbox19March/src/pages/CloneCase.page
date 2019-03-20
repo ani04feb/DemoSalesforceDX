@@ -1,0 +1,27 @@
+<apex:page standardController="Case__c" extensions="CloneCase">
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('Clone Case');
+        }
+    </script>
+    <apex:form >
+        <apex:outputPanel id="pgMsgs">
+            <apex:pageMessages />
+        </apex:outputPanel>
+        <apex:sectionHeader title="Clone Case"> 
+            <apex:pageBlock title="Cloning from {!Case__c.Name}">
+                <apex:pageBlockButtons location="bottom" >
+                    <apex:commandButton action="{!saveClone}" value="Yes, Clone Case" rerender="pgMsgs" oncomplete="sforce.console.openPrimaryTab(null, '/{!Case__c.Id}', false, '{!Case__c.Name}', function openSuccess(result) {sforce.console.focusPrimaryTabById(result.id, null);}, '{!Case__c.Id}');"/>
+                    <apex:commandButton action="{!URLFOR($Action.Case__c.View, Case__c.Id)}" value="No, Cancel"/>
+                </apex:pageBlockButtons>
+                <apex:pageBlockSection columns="1">
+                    <apex:pageMessage severity="info" strength="2" escape="false"
+                        summary="Are you sure you want to clone Case Number <strong>{!Case__c.Name}</strong>?"></apex:pageMessage>
+                </apex:pageBlockSection>
+            </apex:pageBlock>
+        </apex:sectionHeader>
+    </apex:form>
+</apex:page>

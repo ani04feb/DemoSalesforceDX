@@ -1,0 +1,14 @@
+<apex:page standardController="Incident_Witness__c" showHeader="false" sidebar="false" id="thisPage" extensions="WitnessEditController">
+<apex:form >
+  <h1>Redirecting....</h1>
+  <apex:commandButton action="{!redirectToWizard}" id="button1" rendered="true"/>
+  <apex:inputHidden value="{!Incident_Witness__c.Incident__c}"/>
+  <body onLoad="redirect()"/>
+  <script>
+  function redirect() {
+      var button = document.getElementById("{!$Component.button1}");
+      button.click();      
+  }
+  </script>
+</apex:form>
+</apex:page>

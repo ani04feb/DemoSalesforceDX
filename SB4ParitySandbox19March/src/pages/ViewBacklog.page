@@ -1,0 +1,142 @@
+<apex:page controller="ViewBacklog" title="View Backlog" showheader="true" sidebar="false" docType="html-5.0" standardStylesheets="false" tabstyle="Plan__tab" id="thePage">
+    
+  <head>
+    <title>View Backlog</title>
+    <apex:includescript value="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" />
+    <apex:includescript value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.js" />
+    <c:ViewBacklogCSS />
+    <c:ViewBacklogJS />
+  </head>
+  
+  <body>
+    
+    <div class="hidden" id="overlay" />
+    <div class="hidden" id="loading">
+      Updating...
+      <br /><br />
+      <img src="{!URLFOR($Resource.ViewBacklog, '/ViewBacklog/images/ajax-loader.gif')}" />
+    </div>
+    
+    <apex:form id="frmMain">
+     <apex:sectionheader id="sechead" subtitle="Backlog" title="Work Products" />
+     
+        <!-- Select options to view backlog for specific project -->
+        <div style="float:left; width:95%; margin:0px 20px 20px 20px">
+            <apex:outputText value="Select a project: "/>
+            <apex:selectList value="{!selectedProjectId}" size="1" multiselect="false">
+                <apex:selectOptions value="{!items}"/>
+                <apex:actionSupport event="onchange"
+                                    action="{!selectProject}"/>
+            </apex:selectList>
+        </div>
+        
+        <!-- Section on left for product backlog list -->
+        <div class="half wp-container">
+        <div class="section-header">
+          <span class="left bold large-font med-gray">Product Backlog</span>
+          <span class="right link show-hide unselectable">Collapse</span>
+          <span class="right lrg-right-marg link unselectable sort">Sort Descending</span>
+        </div>
+            <ul class="sortable connectedSortable" type="backlog">
+                <apex:repeat value="{!productBacklogList}" var="wp" id="productBklg">
+                        <li id="{!wp.id}"
+                rank="{!wp.rank__c}"
+                name="{!wp.Name}"
+                onblur="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                onfocus="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();"
+                onmouseout="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                onmouseover="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();">
+              <span class="{!IF(wp.is_defect__c, 'left defect', 'left')}">{!wp.rank__c}:&nbsp;{!wp.Name}</span>
+              <span href="/{!wp.id}" class="{!IF(wp.is_defect__c, 'as-link right defect', 'as-link right')}">
+                {!wp.Work_Product_ID__c}
+              </span>
+            </li>
+                </apex:repeat>
+            </ul>
+        </div>
+        
+        <!-- Section on right for iteration and release lists -->
+        <div class="half">              
+            <!-- Iteration backlog section -->
+            <div class="backlog-container"><span class="large-font bold med-gray">Iteration Backlog</span></div>
+            <!-- Creating separate sections for each iteration (ordered by start date desc) -->         
+            <apex:repeat value="{!iterationList}" var="iteration" id="iterationList">
+                <div class="{!IF(iteration.State__c='Accepted', 'wp-container-not-sortable', 'wp-container')}">
+            <div class="section-header">
+              <a href="/{!iteration.id}" target="_blank"><span class="left bold large-font med-gray">{!iteration.Name}</span></a>
+              <span class="bold">
+                    &nbsp;[
+                    <apex:outputText value="{0,date,MMM dd, yyyy}">
+                        <apex:param value="{!iteration.Start_Date__c}" />
+                    </apex:outputText>
+                    -&nbsp;
+                    <apex:outputText value="{0,date,MMM dd, yyyy}">
+                        <apex:param value="{!iteration.End_Date__c}" />
+                    </apex:outputText>]</span>
+              <span class="right link show-hide unselectable">Collapse</span>
+              <span class="right lrg-right-marg link unselectable sort">Sort Descending</span>
+            </div>          
+                    <ul class="{!IF(iteration.State__c='Accepted', 'not-sortable', 'sortable connectedSortable')}" id="{!iteration.id}" type="iteration">
+                        <apex:repeat value="{!iterationBacklogList}" var="wp" id="iterationBklg">   
+                            <apex:outputPanel layout="none" rendered="{!IF(wp.Iteration__c=iteration.id, true, false)}">
+                            <li id="{!wp.id}"
+                      rank="{!wp.rank__c}"
+                      name="{!wp.Name}"
+                      onblur="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                      onfocus="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();"
+                      onmouseout="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                      onmouseover="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();">
+                    <span class="{!IF(wp.is_defect__c, 'left defect', 'left')}">{!wp.rank__c}:&nbsp;{!wp.Name}</span>
+                    <span href="/{!wp.id}" class="{!IF(wp.is_defect__c, 'as-link right defect', 'as-link right')}">
+                      {!wp.Work_Product_ID__c}
+                    </span>
+                  </li> 
+                            </apex:outputPanel> 
+                         </apex:repeat>
+                     </ul>
+                </div>
+            </apex:repeat>  
+            
+             <!-- Release Backlog -->
+             <div class="backlog-container"><span class="large-font bold med-gray">Release Backlog</span></div>
+             <!-- Creating separate sections for each release (ordered by start date desc) -->
+             <apex:repeat value="{!releaseList}" var="release" id="releaseList">
+                <div class="wp-container">
+            <div class="section-header">
+              <a href="/{!release.id}" target="_blank"><span class="left bold large-font med-gray">{!release.Name}</span></a>
+                <span class="bold">
+                    &nbsp;[
+                    <apex:outputText value="{0,date,MMM dd, yyyy}">
+                        <apex:param value="{!release.Start_Date__c}" />
+                    </apex:outputText>
+                    -&nbsp;
+                    <apex:outputText value="{0,date,MMM dd, yyyy}">
+                        <apex:param value="{!release.Release_Date__c}" />
+                    </apex:outputText>]</span>
+              <span class="right link show-hide unselectable">Collapse</span>
+              <span class="right lrg-right-marg link unselectable sort">Sort Descending</span>
+            </div>                
+                    <ul class="sortable connectedSortable" id="{!release.id}" type="release">
+                        <apex:repeat value="{!releaseBacklogList}" var="wp" id="releaseBklg">
+                            <apex:outputPanel layout="none" rendered="{!IF(wp.SS_Release__c=release.id, true, false)}">
+                        <li id="{!wp.id}"
+                      rank="{!wp.rank__c}"
+                      name="{!wp.Name}"
+                      onblur="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                      onfocus="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();"
+                      onmouseout="LookupHoverDetail.getHover('{!wp.id}').hide();"
+                      onmouseover="LookupHoverDetail.getHover('{!wp.id}', '/{!wp.id}/m?retURL=%2F{!wp.id}&isAjaxRequest=1').show();">
+                    <span class="{!IF(wp.is_defect__c, 'left defect', 'left')}">{!wp.rank__c}:&nbsp;{!wp.Name}</span>
+                    <span href="/{!wp.id}" class="{!IF(wp.is_defect__c, 'as-link right defect', 'as-link right')}">
+                      {!wp.Work_Product_ID__c}
+                    </span>
+                  </li> 
+                            </apex:outputPanel>
+                        </apex:repeat>
+                    </ul>
+                </div>
+            </apex:repeat>  
+            </div>
+    </apex:form>
+  </body>
+</apex:page>

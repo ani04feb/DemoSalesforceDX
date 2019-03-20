@@ -1,0 +1,100 @@
+<apex:page standardController="Incident__c" extensions="IncidentWizardController">
+    <style>
+        textarea {
+            width: 90%;
+            height: 75px;
+        }
+        input[type="text"] {
+            width: 75%;
+        }
+        .overrideWidth {    /* Date Time Fields */
+            width: auto !important;
+        }
+    </style>
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('Injury/Illness Details');
+        }
+    </script>    
+    <apex:sectionHeader title="Injury/Illness Details"> 
+    <c:Breadcrumbs /><br/><br/>
+    <apex:form >
+        <apex:outputpanel id="Messages">
+            <apex:pageMessages />
+        </apex:outputpanel>
+        <apex:actionStatus startText="Saving..." id="saveStatus"/>
+        <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+                <apex:pageBlockButtons >
+                    <apex:commandButton action="{!prevPage}"    value="< Previous"    style="margin-right: 100px"/>
+                    <apex:commandButton action="{!save}"        value="Save"        rerender="Messages" status="saveStatus" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                    <apex:commandButton action="{!cancel}"      value="Close"      immediate="true" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                    <apex:commandButton action="{!nextPage}"    value="Next >"      style="margin-left: 100px"/>
+                </apex:pageBlockButtons>
+            <apex:pageBlockSection title="Injuries/Illnesses" columns="1">
+                <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Injury_Details}" var="i">
+                    <apex:inputField value="{!Incident__c[i]}" />
+                </apex:repeat>
+                <apex:pageBlockTable value="{!Injuries}" var="Injury" id="tblInjuries">
+                    <apex:column headerValue="Type" width="15%">
+                        <apex:inputField value="{!Injury.Injury_Illness_Type__c}"/>
+                    </apex:column>
+                    <apex:column headerValue="Bodily Location" width="15%" >
+                        <apex:inputField value="{!Injury.Bodily_Location__c}"/>
+                    </apex:column>
+                    <apex:column headerValue="Position" width="10%" >
+                        <apex:inputField value="{!Injury.Position__c}"/>
+                    </apex:column>                    
+                    <apex:column headerValue="Details" width="60%" >
+                        <apex:inputText value="{!Injury.Injury_Illness_Details__c}" style="width: 95%;"/>
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:commandLink action="{!addNewRow}" reRender="tblInjuries">Add Another Injury or Illness</apex:commandLink>
+                
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="2">
+                <apex:pageBlockSection title="First Aid Details" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.First_Aid_Details}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection title="Referral" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Referral_Details}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSection title="Injury Care" columns="1" rendered="{!isTeamMember}">
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Injury_Care}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection title="Resumed Work/Shopping" columns="1" rendered="{!isNotTeamMember}">
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Resumed_Work}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSection title="Slip or Fall" columns="1" >
+                    <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Slip_or_Fall}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" styleClass="{!IF(f.type == 'datetime','overrideWidth','')}" />
+                    </apex:repeat>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" title="Page Status">
+                <apex:inputField label="Page Completed" value="{!Incident__c.Page_3_Complete__c}" id="completedFlag"/>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+            <apex:inputHidden value="{!Incident__c[typeField]}"/>
+        </apex:repeat>
+        <apex:inputHidden value="{!Incident__c.Injured_Party_Type__c}"/>
+        <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+    </apex:form>
+    </apex:sectionHeader>
+</apex:page>

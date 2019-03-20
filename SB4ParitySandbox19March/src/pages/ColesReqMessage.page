@@ -1,0 +1,10 @@
+<apex:page sidebar="false" showheader="false" >
+<apex:image url="{!$Resource.ColesLogo}" width="300" height="100"/>
+<html>  
+<br/><br/><br/><br/><br/>
+<font size="5">
+            Your request has been submitted. An email is sent to you with request details.
+<br/><br/>      We will contact you as soon as possible.<br/><br/><b>   **Thanks for contacting Coles Salesforce IT Support.**</b>
+</font>
+</html>
+</apex:page>

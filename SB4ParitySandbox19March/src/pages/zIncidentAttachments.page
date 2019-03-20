@@ -1,0 +1,138 @@
+<apex:page standardController="Incident__c" extensions="zIncidentAttachments">
+    <style>
+        /* UI elements on the wizard */
+        textarea { width: 90%; height: 75px; }
+        input[type="text"] { width: 70%; }
+    </style>
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('Files and Links');
+        }
+    </script>
+    <apex:sectionHeader title="Files and Links">
+        <!-- Hide the chatter feed component until all the customizations are done -->
+        <apex:outputPanel rendered="{!NOT(isSite)}">
+            <div id="chatterMsg" style="display: none;">
+                <apex:pageMessage strength="1" severity="confirm" summary="File/Link operation was successfull. Refreshing the page ..."/>
+            </div>
+            <div id="chatterFeed">
+                <chatter:feed entityId="{!Incident__c.Id}" rendered="{!NOT(isSite)}" onComplete="postSave();"/>
+            </div>
+        </apex:outputPanel>
+            
+        <!-- Site specific section -->
+        <apex:form >
+            <apex:variable var="wizardLink"
+                value="{!IF($Profile.Name == 'Coles Safety Profile',
+                            '/colesservice1/zIncidentSummary?id=' + Incident__c.Id,
+                                URLFOR($Action.Incident__c.Edit, Incident__c.Id))}">
+            </apex:variable>
+            <apex:pageMessages />
+            <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+                <apex:pageBlockButtons location="Top">
+                    <apex:commandButton value="Add File, Link" action="{!upload}" rendered="{!isSite}"/>
+                    <apex:commandButton value="Back to Entry Screen" action="{!URLFOR(wizardLink)}"/>
+                </apex:pageBlockButtons>
+                <apex:pageBlockSection columns="2"  rendered="{!isSite}">
+                    <apex:pageBlockSection columns="1" title="Attach File" showHeader="false">
+                        <apex:pageMessage severity="info" strength="1" summary="Maximum size limit for a file is 5MB."/>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="File Name" for="FileName"></apex:outputLabel>
+                            <apex:inputFile value="{!File.Body}" filename="{!File.Name}" id="file"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="Description" for="Description"></apex:outputLabel>
+                            <apex:inputTextArea value="{!File.Description}"/>
+                        </apex:pageBlockSectionItem>
+                    </apex:pageBlockSection>
+                    <apex:pageBlockSection columns="1" title="Add Link"  showHeader="false">
+                        <apex:pageMessage severity="info" strength="1" summary="Both the fields are required to add a link."/>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="Link Name" for="LinkName"></apex:outputLabel>
+                            <apex:inputText id="LinkName" value="{!Link.Title}"/>
+                        </apex:pageBlockSectionItem>
+                        <apex:pageBlockSectionItem >
+                            <apex:outputLabel value="URL" for="LinkURL"></apex:outputLabel>
+                            <apex:inputText id="LinkURL" value="{!Link.Body}" html-placeholder="http://"/>
+                        </apex:pageBlockSectionItem>
+                    </apex:pageBlockSection>
+                </apex:pageBlockSection>
+                <apex:pageBlockTable id="tblAttachments" var="f" value="{!Files}">
+                    <apex:column headerValue="Title">
+                        <apex:outputText value="{!f.Name}" rendered="{!isSite && NOT(CONTAINS(f.Type, 'Link')) }"/>
+                        <apex:outputLink value="{!f.Link}" target="_blank" rendered="{!NOT(isSite) && NOT(CONTAINS(f.Type, 'Link'))}">{!f.Name}</apex:outputLink>
+                        <apex:outputPanel rendered="{!CONTAINS(f.Type, 'Link')}">
+                            <a href="{!f.Link}" target="_blank">{!f.Name}</a>
+                        </apex:outputPanel>
+                    </apex:column>
+                    <apex:column headerValue="Type" value="{!f.Type}"></apex:column>
+                    <apex:column headerValue="Description" value="{!f.Description}"></apex:column>
+                    <apex:column headerValue="Created Date" value="{!f.CreatedOn}"></apex:column>
+                    <apex:column headerValue="Created By" value="{!f.Who}"></apex:column>
+                </apex:pageBlockTable>
+            </apex:pageBlock>
+        </apex:form>
+    </apex:sectionHeader>
+    <script type="text/javascript">
+        var $j = jQuery.noConflict();
+        $j(document).ready(function(){
+            // Attach click handlers to the publisher actions.
+            $j("li.publisherFeedItemTypeChoice[label='ContentPost']").on('click', initFile);
+            $j("li.publisherFeedItemTypeChoice[label='LinkPost']").on('click', initLink);
+            
+            initFeed();
+        });
+
+        // File box initial state
+        function initFile(event){
+            // Remove ability to link from within SFDC
+            $j("table.chatterPublisherActionsContainer td[id!='chatterUploadFileActionPanel']").remove();
+            // Mimic user clicking on Upload a file button
+            $j("a#chatterUploadFileAction").trigger("click");
+            // Set button title to save Upload
+            setButtonText('Upload');
+            // Hide the bottom left bar that shows the visibility of a post
+            $j("div.ContentPost div.bottomBarLeft").remove();
+        }
+        
+        // Link initial state
+        function initLink(event){
+            setButtonText('Save');
+            // Hide the bottom left bar that shows the visibility of a post
+            $j("div.LinkPost div.bottomBarLeft").remove();
+        }
+
+        /* Customize the Chatter Feed component as follows
+            1. Hide all the publisher actions except File (ContentPost) and Link (LinkPost)
+            2. Initial display should open up the File box
+            3. Hide the feed
+        */
+        function initFeed(){
+            // 1. Hide all the publisher actions except File (ContentPost) and Link (LinkPost)
+            $j("li.publisherFeedItemTypeChoice[label!='ContentPost'][label!='LinkPost']").hide();
+            $j("div.publisherTemplate:not('.ContentPost'):not('.LinkPost')").hide();
+
+            // 2. Initial display should open up the File box
+            $j("li.publisherFeedItemTypeChoice[label='ContentPost'] a").trigger("click");                   // Mimic user clicking on File publisher action
+
+            // 3. Hide the feed
+            $j("div#feedwrapper").hide();
+        }
+        
+        // Upload and Save for Files and Link respectively
+        function setButtonText(lbl){
+            $j("input#publishersharebutton").attr('value', lbl).attr('title', lbl);
+        }
+        
+        // After a file is uploaded, we need to refresh the attachments related list, hence reloading the page.
+        function postSave(){
+            $j("div.publishercontainer").remove();
+            $j("#chatterMsg").show();
+            window.location.reload(true);
+        }
+    </script>    
+</apex:page>

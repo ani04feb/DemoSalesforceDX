@@ -1,0 +1,45 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard">
+<!-------------------------------------------------------------
+    Author:        Lok Jackson
+    Company:       Salesforce.com
+    Description:   Incident Selection Page - used to navigate to relevant area of application based on selection
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    19/04/2016   James Douglas      Added descriptor lines to selection to give greater understanding to users
+    ------------------------------------------------------------>
+    <style type="text/css">
+        .hidden {
+            display : none !important;
+        }
+         .imgclass:hover{
+            background-image: url(/img/help/helpOrbs.gif);
+            background-repeat: no-repeat;
+            width: 16px;
+            height: 15px;   
+            background-position: right;
+       
+        }
+        .imgclass{
+            background-image: url(/img/help/helpOrbs.gif);
+            background-repeat: no-repeat;
+            width: 16px;
+            height: 15px;
+        }
+    </style>
+    <apex:form >
+        <apex:pageBlock title="Please select the type of event that has occurred">
+            <apex:outputPanel >
+            <apex:pageBlockSection columns="1">
+                <apex:selectRadio value="{!Incident__c.Incident_Type_List__c}" layout="pageDirection" label="">
+                            <apex:selectOption itemValue="Regulator Management" itemEscaped="False" itemlabel="<b><u>Regulator Management</u></b> <p>&emsp;&emsp;&emsp;(Report a visit or other contact by a Licensing, Government, Food or Safety Regulator/Inspector), adhoc Police visits</p>"/>
+                            <apex:selectOption itemValue="Hazard" itemEscaped="False" itemlabel="<b><u>Hazard</u></b> <p>&emsp;&emsp;&emsp;(Report something that has the potential to cause injury/incident and add corrective actions for prevention)"/>
+                            <apex:selectOption itemValue="Injury" itemEscaped="False" itemlabel="<b><u>Report a work related injury/illness</u></b> <p>&emsp;&emsp;&emsp;(Report an injury or illness sustained to a team member/customer/contractor or other affected person)"/>
+                            <apex:selectOption itemValue="Other" itemEscaped="False" itemlabel="<b><u>Any other Incident Type </u></b>  <p>&emsp;&emsp;&emsp;Including Near Miss or Vehicle or Property Plant Equipment, <p>&emsp;&emsp;&emsp;Threatening situations, Crime, Break-Ins, Theft of stock, <p>&emsp;&emsp;&emsp;Fuel/Gas, Environment <p> "/>
+                   </apex:selectRadio>
+                   </apex:pageBlockSection>
+                   </apex:outputPanel>
+        </apex:pageBlock>
+        <apex:commandButton value="Submit" action="{!navigate}"/>
+    </apex:form>
+</apex:page>

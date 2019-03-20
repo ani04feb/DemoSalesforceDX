@@ -1,0 +1,5 @@
+<apex:page controller="exportContractItemsController" readOnly="true" contentType="application/vnd.ms-excel#exportContractItems.csv">Contract Name,Coles Item Number,"Product Name, Description, Size, State/DC (if applicable)",Net Cost/Unit (excl GST),GST?,Volume/Units,Volume Type,Artwork Cost,Artwork Cost Paid By,Intellectual Property,Certification Requriement,Exclusivity Rights,Exclusivity Rights Territory
+<apex:repeat value="{!ExportItemList}" var="a">
+{!a.Contract_Name},{!a.Coles_Item_Number},"{!a.Description_Size}",{!a.Net_Cost},{!a.GST},{!a.Volume_Units},{!a.Volume_Type},{!a.Artwork_Cost},{!a.Artwork_Cost_Supplied_By},{!a.Intellectual_Proprety},{!a.Certification_Requirement},{!a.Exclusivity_Rights},"{!a.Exclusivity_Rights_Territory}"
+</apex:repeat>
+</apex:page>

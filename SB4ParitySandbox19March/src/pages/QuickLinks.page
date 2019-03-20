@@ -1,0 +1,336 @@
+<apex:page controller="QuickLinks" docType="html-5.0">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko
+    Company:       Salesforce.com
+    Description:   Displays data relevant to current tab in Console. Identify the type of record being shown (contact, case, matter)
+                    Retrieve Quick Links configured for the particular object and run the reports specified in the Quick Links custom setting
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    16-Mar-14   Deepu               Initial Version - Detect Object Type, Custom Setting based Reports
+    24-Mar-14   Deepu               Added listeners to fire Case Type and Team Member reports when they are selected from Case Create console component.
+    01-Apr-14   Deepu               Added Complainant report as a separate report from the custom setting driven reports
+    24-Apr-14   Lok Jackson         Modified formatting to allow for 'show/hide' of tables and report highlighting
+    07-May-14   Lok Jackson         Modified to use Asynchronous Analytics API calls instead of Synchronous to avoid hitting report generation limit restrictions (only 500 sync allowed, 1200 async)
+    ------------------------------------------------------------>
+    <style>
+        .tableCaption { text-align: left; font-size: 115%; padding: 5px; margin-top: 5px; color: rgb(39, 40, 46); }
+        .tableCaption span { cursor:pointer; }
+        .quickLinkTable { box-shadow: 10px 10px 5px #888888; width: 300px; border-collapse:collapse; }
+        .quickLinkTable thead { border: 1px solid #656565; }
+        .quickLinkTable thead th { padding: 5px; border: 1px solid #656565; }
+        .quickLinkTable td { border:1px solid #656565; padding: 5px; }
+    </style>
+    <a name="topQuickLinks"></a>
+    <apex:pageBlock title="Quick Links" id="pgQuickLinks">
+        <apex:pageMessage id="pgMsg" severity="info" strength="1" summary=""></apex:pageMessage>
+        <!-- This is the template table that will be cloned for all the reports. It uses the same styling as pageBlockTable -->
+        <table class="quickLinkTable" id="tmplSFDCTable" style="display: none">
+            <caption class="tableCaption">
+                <apex:image value="{!URLFOR($Resource.loading)}" 
+                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                <span/>
+            </caption>
+            <thead class="rich-table-thead">
+                <tr class="headerRow">
+                    <th class="headerRow"/>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="dataRow">
+                    <td class="dataCell"/>
+                </tr>
+            </tbody>
+        </table>
+        <div id="reportsContent"/>
+    </apex:pageBlock>
+
+    <script src="/support/console/29.0/integration.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="{!$Resource.forcetk}"></script>
+    <script type="text/javascript">
+        var pageInfo;
+        var baseURL = "/v29.0/analytics/reports/";
+        var $j = jQuery.noConflict();     
+
+        var client = new forcetk.Client();
+        client.setSessionToken('{!$Api.Session_ID}');
+        
+        $j(document).ready(function(){
+            // Since the page is embedded as a custom console component, we need to identify first and foremost the record being dispalyed
+            setPageMsg('Detecting type of links to show ...', 'info');
+            getPyTab();
+            
+            // All links should be console friendly
+            $j(document).on("click", "a", function(event){
+                // Do not open navigation links in a new tab
+                if(!$j(this).hasClass("nav")){
+                    sforce.console.openPrimaryTab(null, $j(this).attr("href"), true, $j(this).text(), null, $j(this).text());
+                    event.preventDefault();
+                }
+            });
+            
+            registerConsoleEvent();
+        });
+  
+        function getPyTab() { sforce.console.getEnclosingPrimaryTabId(getPageInfo); }
+        // Now that we have the primary tab ID, we can retrieving the page information which will have the object type
+        function getPageInfo(result) { sforce.console.getPageInfo(result.id , getQuickLinks); }
+      
+        // Once you know the page info that will give the object type, retrieve the reports from the custom setting
+        function getQuickLinks(result)  { 
+            
+            if(result != null && result.pageInfo != null && result.pageInfo != '' )
+                pageInfo = JSON.parse(result.pageInfo);          
+
+            // Due to racing situations in page load of panes vs console API, pageInfo will not have the object id during initial load
+            // So wait for 3 seconds before re-trying this function. Why 3s, I dont know, it seemed like a good amount of time to wait :)
+            if(pageInfo == null || pageInfo.object == null || pageInfo.objectId == null){
+                // Fix for IE 8 - http://msdn.microsoft.com/en-us/library/ie/ms536753(v=vs.85).aspx
+                // Wrapped getting the primary tab and pageInfo in a wrapper function called getPyTab
+                window.setTimeout(getPyTab, 3000);
+            } else {               
+                getReports(pageInfo.object, pageInfo.objectId);                
+            }
+        }
+        
+        function getReports(object, objectId){
+            setPageMsg('Retrieving quick links ...', 'info');
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.QuickLinks.getReports}',
+                object,
+                objectId,
+                function(result, event){
+                    if (event.status) {
+                        runReports(result);
+                    } else {
+                        setPageMsg(event.type + '-' + event.message, 'error')
+                    }
+                }, 
+                {escape: true}
+            );
+        }
+        
+        // Once you know the list of reports to run, use the Analytics API to execute
+        function runReports(result){
+            $j("span[id*=pgMsg]").hide();
+            $j.each(result.QuickLinks, function(cnt, report){
+                createReportStructure(report.Report_Id__c, report.Name, result.QuickLinks[cnt].Colour__c);
+                // Fire the Analytics API to get the data
+                if(report.Name == 'Case.Complainant' && result.objectType == 'Case__c')
+                    execComplainantReport(report.Report_Id__c, result.Complainants);
+                else
+                    execReport(report, result.sObj);
+            });
+        }
+        
+        // Create report table
+        function createReportStructure(reportId, reportName, reportColour){
+            // Clone the table so it gives some sort of a user feedback if the reports take a long time to run
+            var cloned = $j("#tmplSFDCTable").clone();
+            cloned.attr("id", reportId);
+            cloned.find("caption span").text(reportName).attr("name", reportId);
+            cloned.find("th").css("background", reportColour);
+            cloned.find("caption span").click(function(){if(cloned.find("tbody").css("display")!="none") {cloned.find("tbody").hide();} else {cloned.find("tbody").show();}});
+            cloned.find("tbody").hide();
+            cloned.show();
+            cloned.appendTo("#reportsContent");
+            $j("div[id*=pgQuickLinks]").find("td.pbTitle").next().append("&nbsp; &nbsp;<a class='nav' id='rpt" + reportId + "' href='#" + reportId + "'>" + reportName + "</a>");        
+        }
+        
+        // Use the analytics api to execute the report
+        function execReport(report, record){
+
+            // Each report will have to be filtered using the filters
+            var jsonLoad = null;
+            var method = 'GET';     // Default method will be GET
+
+            // Basically form the JSON string that the Analytics API requires        
+            if(report.Filters__c != null){
+                var arrFilters = report.Filters__c.split(',');
+                var arrFields  = report.Fields__c.split(',');
+            
+                jsonLoad = {};
+                jsonLoad.reportMetadata = {};
+                var reportMetadata = jsonLoad.reportMetadata
+                reportMetadata.reportFilters = [];
+    
+                $j.each(arrFilters, function(m, filter){
+                    // Fields on related object have to be accessed from the record json as a 2-D array
+                    relFields = arrFields[m].split('.');
+                    var filterValue = '';
+                    if(relFields.length == 2)
+                        filterValue = record[relFields[0]][relFields[1]];    // Eg: record['Case_Type_3__r']['Name']
+                    else
+                        filterValue = record[relFields[0]];
+                        
+                    reportMetadata.reportFilters[m] = {};
+                    reportMetadata.reportFilters[m].column = filter;
+                    reportMetadata.reportFilters[m].value = filterValue;
+                    reportMetadata.reportFilters[m].operator = "equals";
+                });
+                method = 'POST';
+                jsonLoad = JSON.stringify(jsonLoad);
+            }
+            
+            client.ajax(baseURL + report.Report_Id__c + "/instances?includeDetails=true", getReport, errorReport, method, jsonLoad);            
+        }
+        
+        // Complainant report
+        function execComplainantReport(reportId, records){
+            var criteria = '';
+            $j.each(records, function(item, rec){
+                criteria += ',' + rec.Contact__c;
+            });
+            if(criteria.length > 1) criteria = criteria.slice(1, criteria.length);
+            
+            // Filter criteria
+            var jsonLoad = {};
+            jsonLoad.reportMetadata = {};
+            var reportMetadata = jsonLoad.reportMetadata
+            reportMetadata.reportFilters = [];
+
+            reportMetadata.reportFilters[0] = {};
+            reportMetadata.reportFilters[0].column = 'FK_CNTC_ID';
+            reportMetadata.reportFilters[0].value = criteria;
+            reportMetadata.reportFilters[0].operator = "equals";
+
+            var method = 'POST';
+            jsonLoad = JSON.stringify(jsonLoad);
+
+            // Execution - make an async analytics API request to generate the report
+            client.ajax(baseURL + reportId + "/instances?includeDetails=true", getReport, errorReport, method, jsonLoad);            
+        }
+        
+        // Callback function triggered by async analytics API request, makes a request for the generated report
+        function getReport(response) {
+            client.ajax((response.url).substring((response.url).indexOf('v29.0')), checkStatus, errorReport, 'GET', null);
+        }
+        
+        // check the status of the GET request, if report is not yet generated try again in 3 seconds
+        function checkStatus(response) {
+            if(response.attributes.status != 'Success')
+                window.setTimeout(function(){retryGetReport(response.attributes);}, 3000);
+            else
+                showReport(response);
+        }
+        
+        // handles retries when report is not yet generated when initial GET request is made
+        function retryGetReport(response) {
+            client.ajax(baseURL + response.reportId + "/instances/" + response.id, checkStatus, errorReport, 'GET', null);
+        }
+        
+        // Once the API is executed, show the report
+        function showReport(response){
+            var oTable = $j("#" + response.reportMetadata.id.substring(0,15));
+
+            // Create the table headers
+            var tmplHeader  = oTable.find("thead tr");
+            var tmplCell    = tmplHeader.find("th");
+            $j.each(response.reportExtendedMetadata.detailColumnInfo, function(i, header){
+                var cell = tmplCell.clone();
+                cell.text(header.label);
+                cell.appendTo(tmplHeader);
+            });
+            tmplHeader.find("th:first-child").hide();       // Hide the template cell
+            
+            // Create the table data
+            var tmplBody = oTable.find("tbody");
+            var tmplRow = tmplBody.find("tr");
+            $j.each(response.factMap["T!T"].rows, function(r, row){
+                var dataRow = tmplRow.clone();
+                var tmplCell    = tmplRow.find("td");
+                // Loop through the columns of the returned row
+                $j.each(row.dataCells, function(c, cell){
+                    var dataCell = tmplCell.clone();
+                    var isLink = false;
+                    // For links like name, record id the value will be the 18 digit ID and label will be the text to display
+                    if(cell.label != cell.value){
+                        // Date fields will also have their date and value different so make sure it is 18 digit value
+                        if(cell.value != null && cell.value.length == 18){
+                            isLink = true;
+                            dataCell.html('<a href="/' + cell.value + '" target="_blank">' + cell.label + "</a>")
+                        }
+                    }
+                    if(!isLink)
+                        dataCell.text(cell.label);
+                    dataCell.appendTo(dataRow);
+                });
+                dataRow.appendTo(tmplBody);
+                dataRow.find("td:first-child").hide();       // Hide the template cell
+            });
+            tmplBody.find("tr:first-child").hide();       // Hide the template row
+
+            // Hide the loading icon
+            oTable.find("caption img").hide();
+            var reportText = response.reportMetadata.name + ' (' + response.factMap["T!T"].rows.length + ')';
+            oTable.find("caption span").text(reportText);
+            $j("div[id*=pgQuickLinks]").find("a.nav[id=rpt" + oTable.attr("id") + "]").text(reportText);
+        }
+        
+        // function to set the page message
+        function setPageMsg(msg, type){
+            // At some point should use the type to flip the info and error icons
+            $j("span[id*=pgMsg] div.messageText").text(msg);
+        }
+        // Need to test this function - unknown how to cause a report error, maybe timeout ?
+        function errorReport(jqXHR, textStatus, errorThrown){
+            $j("span[id*=pgMsg]").show();
+            setPageMsg(jqXHR.status + ':' + jqXHR.statusText + ' - ' + jqXHR.responseText);
+        }
+        
+        
+        function registerConsoleEvent(){ 
+            sforce.console.addEventListener('CaseTypeChange', listenerCaseType); 
+            sforce.console.addEventListener('TeamMemberChange', listenerTeamMember); 
+        }
+        
+        var listenerCaseType = function (result) {
+            var caseType = result.message;
+            if(caseType != null && caseType != ''){
+                // Use client query to get the Quick Links associated with Case Type
+                var q = 'SELECT Name, Object__c, Fields__c, Filters__c, Report_Id__c FROM Quick_Links__c WHERE Object__c = \'CaseType\'';
+                client.query(q, 
+                    function(result){ 
+                        if(result.records.length == 1){
+                            var report = result.records[0];
+                            // Kill existing table and anchor tag
+                            $j("table[id=" + report.Report_Id__c + "], a.nav[id=rpt" + report.Report_Id__c + "]").remove();
+                            // Form a record variable with the data you got from the even type
+                            var record = [];
+                            record["CaseType"] = caseType;
+                            // Call execReport function by passing the above two values and that should take care of the whole thing
+                            createReportStructure(report.Report_Id__c, report.Name);
+                            execReport(report, record);
+                        }
+                    },
+                    function(jqXHR, textStatus, errorThrown){}
+                );
+            }
+        };
+        
+        var listenerTeamMember = function (result) {
+            var TeamMemberId = result.message;
+            if(TeamMemberId != null && TeamMemberId != ''){
+                // Use client query to get the Quick Links associated with Case Type
+                var q = 'SELECT Name, Object__c, Fields__c, Filters__c, Report_Id__c FROM Quick_Links__c WHERE Object__c = \'TeamMember\'';
+                client.query(q, 
+                    function(result){ 
+                        if(result.records.length == 1){
+                            var report = result.records[0];
+                            // Kill existing table and anchor tag
+                            $j("table[id=" + report.Report_Id__c + "], a.nav[id=rpt" + report.Report_Id__c + "]").remove();
+                            // Form a record variable with the data you got from the even type
+                            var record = [];
+                            record["Id"] = TeamMemberId;
+                            // Call execReport function by passing the above two values and that should take care of the whole thing
+                            createReportStructure(report.Report_Id__c, report.Name);
+                            execReport(report, record);
+                        }
+                    },
+                    function(jqXHR, textStatus, errorThrown){}
+                );
+            }
+        };
+    </script>
+</apex:page>

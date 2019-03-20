@@ -1,0 +1,217 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko, Lok Jackson, Kim Davies, Paul Fayle
+    Company:       Salesforce.com
+    Description:   Involved Person Page
+    Inputs:        None
+    History 
+    <Date>      <Authors Name>     <Brief Description of Change>
+    26-Mar-14   Deepu               Initial Version
+    5-Jul-15    Rohit               Added Rerendering stuff as per new reuirements
+    20-05-16    JD                  Added if statement to First Aid appearance
+    ------------------------------------------------------------>
+    <apex:composition template="zIncidentWizard">
+        <apex:define name="content">
+           <apex:actionRegion >
+                <apex:pageBlockSection title="Person Type" columns="1">
+                    <apex:inputField value="{!Incident__c.Injured_Party_Type__c}" required="true">
+                        <apex:actionSupport event="onchange" status="typeStatus" rerender="TeamMemberUnknownCheckbox, PersonInfo">
+                            <apex:actionStatus id="typeStatus">
+                                <apex:facet name="start">
+                                        <apex:image value="{!URLFOR($Resource.loading)}" 
+                                            style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:actionSupport>
+                    </apex:inputField>
+                </apex:pageBlockSection>
+            </apex:actionRegion>
+            <apex:outputPanel id="TeamMemberUnknownCheckbox">
+                <apex:pageBlockSection rendered="{!isTeamMember}">
+                    <apex:inputField value="{!Incident__c.Team_Member_Not_Known__c}">
+                        <apex:actionSupport event="onchange" status="notKnownStatus" rerender="PersonInfo">
+                            <apex:actionStatus id="notKnownStatus">
+                                <apex:facet name="start">
+                                        <apex:image value="{!URLFOR($Resource.loading)}" 
+                                            style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:actionSupport>
+                    </apex:inputField>
+                </apex:pageBlockSection>
+            </apex:outputPanel>
+            <apex:outputPanel id="PersonInfo">
+                <apex:pageBlockSection title="Team Member Details" columns="1" rendered="{!NOT(Incident__c.Team_Member_Not_Known__c) && isTeamMember}">
+                    <apex:inputField value="{!Incident__c.Injured_Party__c}">
+                        <apex:actionSupport event="onchange" rerender="Minor,info,PersonInfo" status="PartySelected">
+                            <apex:actionStatus id="PartySelected">
+                                <apex:facet name="start">
+                                        <apex:image value="{!URLFOR($Resource.loading)}" 
+                                            style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:actionSupport>
+                    </apex:inputField>
+                     <apex:inputField value="{!Incident__c.Shift_Type__c}"/>
+                     <apex:inputField value="{!Incident__c.Shift_Commenced__c}"/>
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection title="Team Member Details" columns="2"  rendered="{!Incident__c.Team_Member_Not_Known__c && isTeamMember}">
+                    <apex:pageBlockSection columns="1">
+                        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Person_Details}" var="pField">
+                            <apex:inputField value="{!Incident__c[pField]}" />
+                        </apex:repeat>
+                        <apex:inputField value="{!Incident__c.Age_Group__c}">
+                            <apex:actionSupport event="onchange" rerender="Minor" status="notKnownAgeGroup">
+                                <apex:actionStatus id="notKnownAgeGroup">
+                                    <apex:facet name="start">
+                                            <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                    </apex:facet>
+                                </apex:actionStatus>
+                            </apex:actionSupport>
+                        </apex:inputField>
+                    </apex:pageBlockSection> 
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection title="Person Details" columns="2"  rendered="{!isNotTeamMember}">
+                    <apex:pageBlockSection columns="1">
+                        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Person_Details}" var="pField">
+                            <apex:inputField value="{!Incident__c[pField]}" />
+                        </apex:repeat>
+                        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Person_Address}" var="paField">
+                            <apex:inputField value="{!Incident__c[paField]}" />
+                        </apex:repeat>
+                </apex:pageBlockSection>
+                    
+                    <apex:outputPanel id="info">
+                        
+                        <apex:pageBlockSection columns="1">
+                            <!--
+                             <apex:inputField value="{!Incident__c.Date_of_Birth__c}" styleClass="overrideWidth">
+                                <apex:actionSupport event="onchange" rerender="Minor" status="notTeamMemberDOB">
+                                    <apex:actionStatus id="notTeamMemberDOB">
+                                        <apex:facet name="start">
+                                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:actionSupport>
+                            </apex:inputField>
+                            -->
+                            <apex:inputField value="{!Incident__c.Age_Group_Descriptive__c}">
+                                <apex:actionSupport event="onchange" rerender="Minor" status="notTeamMemberAgeGroup">
+                                    <apex:actionStatus id="notTeamMemberAgeGroup">
+                                        <apex:facet name="start">
+                                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:actionSupport>
+                            </apex:inputField>
+                            <apex:pageBlockSection columns="1" rendered="{!if(Incident__c.Injured_Party_Type__c !='Customer/Member of Public',true,false)}">
+                                 <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Visitor_Details}" var="pField">
+                                             <apex:inputField value="{!Incident__c[pField]}" />
+                                 </apex:repeat>
+                                 <apex:inputField value="{!Incident__c.Type_of_Contractor__c}" rendered="{!if(Incident__c.Brand__c == 'Supply Chain',true,false)}"/>
+                            </apex:pageBlockSection>
+                            <apex:pageBlockSection columns="1" rendered="{!if(Incident__c.Injured_Party_Type__c =='Customer/Member of Public',true,false)}">
+                                <apex:inputField value="{!Incident__c.Was_Injury_a_Slip_or_Fall__c}">
+                                    <apex:actionSupport event="onchange" rerender="PersonInfo" status="slipStatus">
+                                    <apex:actionStatus id="slipStatus">
+                                        <apex:facet name="start">
+                                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                    </apex:actionSupport>
+                                </apex:inputField>    
+                            </apex:pageBlockSection>
+                            <apex:pageBlockSection columns="1" rendered="{!if(Incident__c.Was_Injury_a_Slip_or_Fall__c =='Yes',true,false)}" id="slipSection">
+                                    <apex:inputField value="{!Incident__c.Date_Last_Cleaned__c}"/>
+                                    <apex:inputField value="{!Incident__c.Time_Last_Cleaned__c}"/>
+                                    <apex:inputField value="{!Incident__c.Description_of_Footwear__c}"/>
+                            </apex:pageBlockSection>
+                        </apex:pageBlockSection>
+                    </apex:outputPanel>
+                    
+                </apex:pageBlockSection>
+                <apex:outputPanel id="Minor">
+                    <apex:pageBlockSection title="Minor Information" columns="2"  rendered="{!isMinor}">
+                        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Minor_Details}" var="mField">
+                            <apex:inputField value="{!Incident__c[mField]}" />
+                        </apex:repeat>
+                    </apex:pageBlockSection>
+                    <apex:pageBlockSection title="First Aid" columns="1" rendered="{!if(Incident__c.Injury_or_Illness__c=false,false,true)}">
+                     <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                             <apex:inputField value="{!Incident__c.First_Aid_Provided__c}" required="{!Incident__c.Validate__c}">
+                               <apex:actionSupport event="onchange" rerender="PersonInfo">
+                                    <apex:actionStatus id="AidSelected">
+                                        <apex:facet name="start">
+                                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:actionSupport>
+                             </apex:inputField>
+                    </div>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1" rendered="{!if(Incident__c.First_Aid_Provided__c == 'Yes',true,false)}">
+                      <apex:inputField value="{!Incident__c.First_Aider_Name__c}"/>
+                     <apex:inputField value="{!Incident__c.Treatment_Details__c}"/>
+                </apex:pageBlockSection>
+                <!-- Added Witness Section for Miscellaneous Page -->
+                <apex:pageBlockSection title="Witness" columns="1" rendered="{!if(Incident__c.Brand__c == 'Liquorland' && Incident__c.Sub_Type__c == 'Theft - Stock/Property',false,true)}">
+                <apex:pageBlockTable value="{!Witnesses}" var="w" id="tblWitness">
+                    <apex:column headerValue="Type" width="15%">
+                        <apex:inputField value="{!w.Witness_Type__c}">
+                            <apex:actionSupport event="onchange" reRender="WitnessContact" status="typeStatus">
+                                <apex:actionStatus id="typeStatus">
+                                    <apex:facet name="start">
+                                            <apex:image value="{!URLFOR($Resource.loading)}" 
+                                                style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                    </apex:facet>
+                                </apex:actionStatus>
+                            </apex:actionSupport>
+                        </apex:inputField>
+                    </apex:column>
+                    <apex:column headerValue="Name" width="20%" >
+                        <apex:outputPanel id="WitnessContact">
+                            <apex:inputField value="{!w.Witness_Name__c}" rendered="{!(w.Witness_Type__c != 'Team Member')}"/>
+                            <apex:inputField value="{!w.Contact__c}" rendered="{!(w.Witness_Type__c == 'Team Member')}"/>
+                        </apex:outputPanel>
+                    </apex:column>
+                    <apex:column headerValue="Phone" width="10%" >
+                        <apex:inputField value="{!w.Witness_Phone_No__c}"></apex:inputField>
+                    </apex:column>
+                    <apex:column headerValue="Email" width="30%" >
+                        <apex:inputField value="{!w.Witness_Email__c}"></apex:inputField>
+                    </apex:column>
+                </apex:pageBlockTable>
+                <apex:commandLink action="{!addNewWitnessRow}" reRender="tblWitness" status="witnessStatus">Add New Row
+                    <apex:actionStatus id="witnessStatus">
+                        <apex:facet name="start">
+                                <apex:image value="{!URLFOR($Resource.loading)}" 
+                                    style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                        </apex:facet>
+                    </apex:actionStatus>
+                </apex:commandLink>
+            </apex:pageBlockSection>
+                <!-- End of Witness Section -->
+                </apex:outputPanel>
+                <!-- Logic for Page Completed would be updated -->
+                <!--<apex:pageBlockSection columns="1" title="Page Status">
+                    <apex:inputField value="{!Incident__c.Page_2_Complete__c}" id="completedFlag"/>
+                </apex:pageBlockSection>
+                -->
+                <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+                    <apex:inputHidden value="{!Incident__c[typeField]}"/>
+                </apex:repeat>
+                <apex:inputHidden value="{!Incident__c.Validate__c}"/>
+                <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+                <apex:inputHidden value="{!Incident__c.Pages_Complete__c}"/> 
+            </apex:outputPanel>
+        </apex:define>
+    </apex:composition>
+</apex:page>

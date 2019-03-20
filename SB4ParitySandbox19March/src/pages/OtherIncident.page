@@ -1,0 +1,81 @@
+<apex:page standardController="Incident__c" extensions="IncidentWizardController">
+    <style>
+        textarea {
+            width: 90%;
+            height: 75px;
+        }
+        input[type="text"] {
+            width: 75%;
+        }
+        .overrideWidth, .Date_Reported_Car_Wash__c, .Time_sighted__c, .Tank_Number__c {    /* Date Time Fields */
+            width: auto !important;
+        }
+    </style>
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('Other Incident Details');
+        }
+    </script>
+    <apex:sectionHeader title="Other Incident Details">
+    <c:Breadcrumbs /><br/><br/>
+    <apex:form >
+        <apex:outputpanel id="Messages">
+            <apex:pageMessages />
+        </apex:outputpanel>
+        <apex:actionStatus startText="Saving..." id="saveStatus"/>
+        <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{!prevPage}"    value="< Previous"    style="margin-right: 100px"/>
+                <apex:commandButton action="{!save}"        value="Save"        rerender="Messages" status="saveStatus" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                <apex:commandButton action="{!cancel}"      value="Close"      immediate="true" rendered="{!$Profile.Name != 'Coles Safety Profile'}"/>
+                <apex:commandButton action="{!nextPage}"    value="Next >"      style="margin-left: 100px"/>
+            </apex:pageBlockButtons>
+            
+            <apex:pageBlockSection title="Incident Type {!Incident__c.Type__c}" columns="2">
+                <apex:outputText value="Incident Type {!Incident__c.Type__c}" style="font-weight:bold"> </apex:outputText>
+                <apex:outputText value="incident Sub Type {!Incident__c.Sub_Type__c}" style="font-weight:bold"> </apex:outputText>
+                    <apex:actionSupport event="onchange" reRender="pgOtherIncident" status="typeStatus">
+                        <apex:actionStatus id="typeStatus">
+                            <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                            </apex:facet>
+                        </apex:actionStatus>
+                    </apex:actionSupport>
+            </apex:pageBlockSection>
+            
+            <!-- Identify the field set to use based on the Type field -->
+            <apex:outputPanel id="pgOtherIncident">
+                <apex:variable var="FieldSetName" value="{!CASE(Incident__c.OtherIncidentfieldsetused__c,
+                    'Crime',                        $ObjectType.Incident__c.FieldSets.Crime,
+                    'Crime2',                       $ObjectType.Incident__c.FieldSets.Crime2,
+                    'Threatening Situation',        $ObjectType.Incident__c.FieldSets.Threatening_Situation,
+                    'Property, Plant & Equipment',  $ObjectType.Incident__c.FieldSets.Property_Plant_Equipment,
+                    'Environmental',                $ObjectType.Incident__c.FieldSets.Environmental,
+                    'Chemical',                     $ObjectType.Incident__c.FieldSets.Chemical,
+                    'Fire/Explosion',               $ObjectType.Incident__c.FieldSets.Fire_Explosion,
+                    'Vehicle',                      $ObjectType.Incident__c.FieldSets.Vehicle,
+                    'Car Wash',                     $ObjectType.Incident__c.FieldSets.Car_Wash,
+                                                    $ObjectType.Incident__c.FieldSets.Empty)}"></apex:variable>            
+                
+                <apex:pageBlockSection title="{!Incident__c.Type__c}" rendered="{!NOT(ISNULL(Incident__c.Type__c))}" columns="1">
+                    <apex:repeat value="{!FieldSetName}" var="f">
+                        <apex:inputField value="{!Incident__c[f]}" styleClass="{!f}"/>
+                    </apex:repeat>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1" title="Page Status">
+                    <apex:inputField label="Page Completed" value="{!Incident__c.Page_7_Complete__c}" id="completedFlag"/>
+                </apex:pageBlockSection>
+            </apex:outputPanel>
+        </apex:pageBlock>
+        <!-- Since Type and Sub Type fields are already present as part of one of the field sets above, we should not be rendering them
+        here as it will conflict with those fields during Save -->
+        <apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+            <apex:inputHidden value="{!Incident__c[typeField]}" rendered="{!typeField != 'Type__c' && typeField != 'Sub_Type__c'}"/>
+        </apex:repeat>
+        <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+    </apex:form>
+    </apex:sectionHeader>
+</apex:page>

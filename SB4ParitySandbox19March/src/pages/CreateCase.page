@@ -1,0 +1,144 @@
+<apex:page tabStyle="Case__c" standardController="Contact" extensions="CreateCase" docType="html-5.0" showHeader="false" sidebar="false">
+   
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/cupertino/jquery-ui.min.css" />
+        
+    <script src="/support/console/29.0/integration.js"></script>
+    <script> 
+        if('{!prevCase.Id}')
+        {
+            sforce.console.openPrimaryTab(null, '/{!prevCase.Id}', false, 'Case {!prevCase.Name}', function openSuccess(result) {sforce.console.focusPrimaryTabById(result.id, null);}, '{!prevCase.Id}');
+        }
+    </script>
+    
+    <apex:form >
+        <apex:pageMessages id="pgMessages"></apex:pageMessages>
+        <apex:pageBlock >
+            <apex:pageBlockButtons >
+                <apex:commandButton value="Create Case" action="{!saveCase}" status="saveStatus" reRender="pgMessages" />
+                <apex:actionStatus id="saveStatus" >
+                    <apex:facet name="start">
+                            <apex:image value="{!URLFOR($Resource.loading)}" 
+                                style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                    </apex:facet>
+                </apex:actionStatus>
+            </apex:pageBlockButtons>
+            <apex:pageBlockSection columns="1">
+                <apex:pageBlockSection columns="1" title="Details">
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel >Case Type</apex:outputLabel>                        
+                        <apex:inputText value="{!Classifier.Name}" id="search" style="width: 65%" />
+                    </apex:pageBlockSectionItem>
+                </apex:pageBlockSection>    
+                <apex:pageBlockSection columns="1" id="mainSection">
+                    <apex:pageBlockSectionItem rendered="{!Contact.Above_Store__c}">
+                        <apex:outputLabel >Caller Brand</apex:outputLabel>                       
+                        <apex:inputField value="{!caseRec.Caller_Brand__c}" style="width: 65%"/>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!Contact.Above_Store__c}">
+                        <apex:outputLabel >Caller Reporting Department</apex:outputLabel>                       
+                        <apex:inputField value="{!caseRec.Caller_Reporting_Department__c}" style="width: 65%"/>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel >Team Member Involved</apex:outputLabel>
+                        <apex:inputField value="{!caseRec.Contact__c}" id="TeamMember" onkeydown="if(event.keyCode==13){this.blur();actionFunction();}">
+                            <apex:actionSupport event="onblur" action="{!setContactRecord}" status="memStatus" reRender="mainSection"></apex:actionSupport>
+                            <apex:actionStatus id="memStatus" startText="Getting team member details..."/>
+                            <br/>
+                            <apex:outputPanel id="opTeamMember" layout="block">
+                            <apex:commandButton value="Copy Caller" action="{!copyCaller}" oncomplete="fireTMChangeEvent()" reRender="mainSection" />
+                            <apex:outputPanel id="opTeamMemberDynamic" layout="block" rendered="{!NOT(ISNULL(caseRec.Contact__c))}">
+                                <p style="line-height:25px;font-size:10px;padding-left:10px;"> 
+                                <apex:outputLabel value="Site:" style="font-weight:bold;" /> &nbsp;
+                                <apex:outputField value="{!ContactRecord.Account.Name}" style="font-size:10px;"/> <br/> 
+                                <apex:repeat value="{!$ObjectType.Contact.FieldSets.Search}" var="pField">
+                                    <apex:outputLabel value="{!$ObjectType.Contact.fields[pField].Label}:" style="font-weight:bold;" /> &nbsp;
+                                    <apex:outputField value="{!ContactRecord[pField]}" style="font-size:10px;"/> <br/> 
+                                </apex:repeat>
+                                </p>
+                            </apex:outputPanel>
+                            </apex:outputPanel>
+                        </apex:inputField>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!ContactRecord.Above_Store__c}">
+                        <apex:outputLabel >Team Member Brand</apex:outputLabel> 
+                        <apex:inputField value="{!caseRec.Brand__c}" style="width: 65%"/>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!ContactRecord.Above_Store__c}">
+                        <apex:outputLabel >Team Member Reporting Department</apex:outputLabel> 
+                        <apex:inputField value="{!caseRec.Reporting_Department__c}" style="width: 65%"/>
+                    </apex:pageBlockSectionItem>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1" title="Case Notes" >
+                    <apex:outputPanel style="max-width: 65%; min-width: 65%;"><apex:inputField value="{!caseRec.New_Notes__c}"/></apex:outputPanel>
+                </apex:pageBlockSection>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+    
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+
+    <script type="text/javascript">
+        var $j = jQuery.noConflict();
+        var Classifiers = [];           // Used for auto complete and to set the drop downs for Level 1 and 2.
+        
+        // Fetch all the classifiers
+        CreateCase.getAllClassifiers(function(result, event){
+            // Display should be Name while the selected value should be the ID for the Case record, Level 1 and Level 2 to set on the UI.
+            if(event.status){
+                // Make an array where the label is the name and the value is the HR classification record.
+                $j.each(result, function(cnt, item){
+                
+                    // Sometimes classifiers have & which in REST call will get translated to &amp;
+                    // Using the below snippet to decode not just & but all other problem guys like < > ' " ..etc
+                    var div = document.createElement('div');
+                    div.innerHTML = item.Name;
+                    item.Name = div.firstChild.nodeValue;
+                    
+                    var Classifier = {
+                        'label' : item.Name,
+                        'value' : item.Id,
+                        'level_1' : item.Level_1__c,
+                        'level_2' : item.Level_2__c
+                    }
+                    Classifiers.push(Classifier);
+                });
+                setAutoComplete();
+            }
+        });
+        // Called once the response for Remote Action is returned
+        function setAutoComplete(){
+            $j("input[id*=search]").autocomplete({
+                source: Classifiers,
+                focus : setDropDowns,
+                select: setDropDowns
+            });
+            $j("input[id*=search]").removeAttr('disabled').attr('placeholder', 'Search Case Types');
+        }
+        // Called when auto complete focus and select events are fired to set the drop down based on selection
+        function setDropDowns(event, ui){
+            $j("input[id*=search]").val( ui.item.label );
+            $j("select[id*=level1]").val( ui.item.level_1 );
+            $j("select[id*=level2]").val( ui.item.level_2 );
+            // If the user has selected a value then traverse to Team Member Involved box
+            if(event.type == 'autocompleteselect'){
+                $j("input[id*=TeamMember]").focus();
+                sforce.console.fireEvent('CaseTypeChange', ui.item.label, cbEventChange);
+            }
+            return false;
+        }
+        
+        var cbEventChange = function(result) { } 
+        
+        function fireTMChangeEvent(){
+            sforce.console.fireEvent('TeamMemberChange', $j("input[id*=TeamMember_lkid]").val(), cbEventChange);
+        }
+         
+        $j(document).ready(function(){
+            $j("input[id*=search]").attr("disabled", "disabled").attr('placeholder', 'Retrieving Case Types...');     // Enable the search only after remote action completes
+            $j("input[id*=TeamMember]").change(function(event){
+                sforce.console.fireEvent('TeamMemberChange', $j("input[id*=TeamMember_lkid]").val(), cbEventChange);
+            });
+        })
+    </script>
+</apex:page>

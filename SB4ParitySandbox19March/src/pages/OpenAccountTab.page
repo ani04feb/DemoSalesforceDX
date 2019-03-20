@@ -1,0 +1,8 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="true" standardcontroller="Contact">
+  <apex:includeScript value="/support/console/28.0/integration.js"/>
+  <script>
+    sforce.console.getEnclosingPrimaryTabId(function(result) {
+      sforce.console.openSubtab(result.id,'/{!Contact.AccountId}',false,'{!Contact.Account.Name}',null);
+    });
+  </script>
+</apex:page>

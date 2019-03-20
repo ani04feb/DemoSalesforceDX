@@ -1,0 +1,8 @@
+<apex:page standardcontroller="Case__c" extensions="DisciplineOutcomeListController">
+    <apex:pageBlock >
+        <apex:pageBlockTable value="{!HRCases}" var="HRCase" rows="10">
+            <apex:column value="{!HRCase.Disciplinary_Outcome__c}"/>
+            <apex:column value="{!HRCase.Date_Delivered__c}"/>
+        </apex:pageBlockTable>
+    </apex:pageBlock>
+</apex:page>

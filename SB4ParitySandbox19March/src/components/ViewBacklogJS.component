@@ -1,0 +1,170 @@
+<apex:component >
+    <script>
+    var COLLAPSE   = 'Collapse';
+    var EXPAND     = 'Expand';
+    var DESCENDING = 'Sort Descending';
+    var ASCENDING  = 'Sort Ascending';
+    var $from;
+    var cancelDrag = false;
+    
+    $(document).ready(function() {
+            initializeSortable();
+      bindActions();
+      placeEmptySectionMessage();
+        });
+    
+    $(document).keyup(function(ev) {
+      if(ev.keyCode == 27 && $from) {
+        cancelDrag = true;
+        $from.sortable('cancel');
+      }
+    });    
+    
+    function detectSectionsWithoutChildren() {
+      var sections = [];
+      
+      $('ul.sortable').each(function(idx, ele) {
+        if($(ele).find('li').length === 0) {
+          sections.push(ele);
+        }
+      });
+      
+      return sections;
+    }
+    
+    function placeEmptySectionMessage() {
+      var sections = detectSectionsWithoutChildren();
+      $(sections).html(
+        '<div class="sort-disabled no-result">No Work Products Found</div>');
+    }
+    
+    function rankProducts($target) {
+      var isAscending = isDisplayedAscending($target);
+      var numToRank   = $target.find('li').length;
+      var actualIndex;
+      
+      $target.find('li').each(function(index, value) {
+        actualIndex = isAscending? index : numToRank - index - 1;
+        var $that = $(this);
+        $that.attr('rank', actualIndex);
+        $that.find('>:first-child')
+             .html(actualIndex + ':&nbsp;' + $that.attr('name'));
+      });
+    }
+    
+    function bindActions() {
+      $('.as-link').unbind().click(gotoHref);
+      $('span.show-hide').click(expandAndCollapse);
+      $('span.sort').click(flipRankOrder);
+    }
+    
+    function gotoHref() {
+      window.open($(this).attr('href'), '_blank');
+    }
+    
+    function showLoadingPopup() {
+      $('div#overlay, div#loading').show();
+    }
+    
+    function hideLoadingPopup() {
+      $('div#overlay, div#loading').hide();
+    }
+        
+    function initializeSortable() {
+            $( ".sortable" ).sortable({
+                connectWith: ".sortable",
+                dropOnEmpty: true,
+                cancel: ".sort-disabled",
+        
+        over: function(event, ui) {
+          $(this).parent().addClass('droppable');
+        },
+        
+        out: function(event, ui) {
+          $(this).parent().removeClass('droppable');
+        },
+        
+        start: function(event, ui) {
+          $from = $(ui.item.context).parent();
+          $dragged = $(ui.item.context);
+        },
+        
+        stop: function(event, ui) {
+          if(cancelDrag) {
+            cancelDrag = false
+            return false;
+          }
+          
+          var $to          = $(ui.item.context).parent();
+          var toGrouping   = getGrouping($to);
+          var fromGrouping = getGrouping($from);
+          
+          $('div.no-result').remove();
+            showLoadingPopup();
+
+          ViewBacklog.updateWorkProductRank($to.sortable('toArray'), 
+                                              toGrouping.release,
+                                              toGrouping.iteration,
+                                            isDisplayedAscending($to),
+                                            $from.sortable('toArray'),
+                                            fromGrouping.release,
+                                            fromGrouping.iteration,
+                                            isDisplayedAscending($from),
+                                              function(result, event) {
+            if(!wasError(event)) { 
+              rankProducts($to);
+              rankProducts($from);
+              placeEmptySectionMessage();
+              hideLoadingPopup();
+              $from = null;
+            }
+          });
+                }
+            }).disableSelection();    
+        }
+    
+    function getGrouping($target) {      
+            var newListType = $target.attr('type');
+            var iterationId = '';
+      var releaseId   = '';
+      
+      if (newListType === "release") {
+        releaseId = $target.attr('id');
+      } else if (newListType === "iteration") {
+            iterationId = $target.attr('id');
+      }
+      
+      return { iteration : iterationId, release : releaseId };
+    }
+    
+    function isDisplayedAscending($target) {
+      return $target.parent().find('span.sort').text() === DESCENDING;      
+    }
+    
+        function wasError(event) {
+            if(event.type === 'exception') {
+                console.log('An error occured');
+                console.log(event.message);
+                console.log(event.where);
+                alert('The following error has occured: ' + event.message);
+                return true;
+            }
+      
+      return false;
+        }
+    
+    function expandAndCollapse() {
+      var $this = $(this);
+      $this.text($this.text() === COLLAPSE ? EXPAND : COLLAPSE);
+      $this.parent().parent().find('ul').toggle();
+    }
+    
+    function flipRankOrder() {
+      var $this = $(this);
+      $this.text($this.text() === DESCENDING ? ASCENDING : DESCENDING);
+      var $ul = $this.parent().parent().find('ul');
+      $ul.html($ul.find('li').get().reverse());
+      $('.as-link').unbind().click(gotoHref);
+    }
+    </script>
+</apex:component>

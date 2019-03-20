@@ -1,0 +1,41 @@
+<apex:page showHeader="false" sidebar="false" standardStylesheets="true" standardcontroller="Case__c" extensions="CaseCommentsController">
+<!-------------------------------------------------------------
+    Author:        Lok Jackson
+    Company:       Salesforce.com
+    Description:   Displays Draft Notes and Submitted (encrypted) Notes, and allows users to save draft notes
+                   or Submit them to the Case Notes field (this appends them to the existing notes and encrypts them).
+                   Javascript has also been implemented on this page to save the Draft Notes every 30 seconds.
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    03/06/2014  Lok                Modified to not refresh parent page after submission as this was no longer needed and caused conflict 
+                                   with the Autosave function and the Submit function
+------------------------------------------------------------>
+    <apex:form >
+    <apex:pageBlock >
+        <apex:actionFunction name="autosave" action="{!saveDraft}" rerender="out" status="savestatus"/>
+        <apex:actionStatus id="savestatus">
+            <apex:facet name="start"> Auto Saving....<img src="/img/loading.gif"/> </apex:facet> 
+        </apex:actionStatus>
+        <apex:pageBlockButtons >
+            <apex:commandButton action="{!saveDraft}" value="Save Draft" />
+            <apex:commandButton action="{!saveRecord}" value="Submit Notes" />
+        </apex:pageBlockButtons>
+        <apex:pageBlockSection columns="1" title="Draft Notes">
+            <apex:inputField value="{!Case__c.New_Notes__c}" label="" style="height:30px"/>
+            <apex:inputHidden value="{!Case__c.Case_Notes__c}"/>
+        </apex:pageBlockSection>
+        <apex:pageBlockSection columns="1" title="Case Notes">
+            <apex:outputText value="{!rawNotes}" escape="false" style="height:30px"/>
+        </apex:pageBlockSection>
+    </apex:pageBlock>
+    </apex:form>
+    <script>
+          window.setTimeout(recursivecall,30000);
+          function recursivecall()
+          {
+              window.setTimeout(recursivecall,30000);
+              autosave();
+          }    
+    </script>
+</apex:page>

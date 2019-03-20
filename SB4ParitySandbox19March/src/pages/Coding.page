@@ -1,0 +1,119 @@
+<apex:page standardController="Incident__c" extensions="IncidentWizardController">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko
+    Company:       Salesforce.com
+    Description:   Part of the Incident Create wizard for CIDs to specify the cause and effect of the Incident
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    17-Mar-14   Deepu               Initial Version - Autosearch Causes and typical Save
+    ------------------------------------------------------------>
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/cupertino/jquery-ui.min.css" />
+    <style>
+        /* Override font style and size */
+        .ui-menu-item a { font-size: 11px; font-family: 'Lucida Grande'; padding: 1px .4em; }
+        .ui-autocomplete{
+            max-height: 100px;
+            overflow-y: auto;       
+            overflow-x: hidden;
+        } 
+    </style>
+    <!-- Page is used from a Site in addition to Console so using the absolute path for integration.js -->
+    <script src="https://c.na1.visual.force.com/support/console/29.0/integration.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        if (sforce.console.isInConsole()) {
+            sforce.console.setTabTitle('Coding');
+        }
+    </script>    
+    <apex:sectionHeader title="Coding"/> 
+    <c:Breadcrumbs ></c:Breadcrumbs><br/><br/>
+    <apex:form >
+        <apex:outputpanel id="Messages">
+            <apex:pageMessages />
+        </apex:outputpanel>
+        <apex:actionStatus startText="Saving..." id="saveStatus"/>
+        <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{!prevPage}"    value="< Previous"    style="margin-right: 100px"/>
+                <apex:commandButton action="{!save}"        value="Save"        />
+                <apex:commandButton action="{!cancel}"      value="Close"      immediate="true" />
+                <apex:commandButton action="{!URLFOR($Action.Incident__c.Clone, Incident__c.Id)}"      value="Clone"      immediate="true" rendered="{!$Profile.Name != 'Coles Safety Profile'}" style="margin-left: 100px"/>
+                <apex:commandButton action="{!nextPage}"    value="Finish"/>
+            </apex:pageBlockButtons>
+            
+            <apex:pageBlockSection columns="1" title="Cause of Incident">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Search Cause</apex:outputLabel>
+                    <apex:inputText id="search"/>
+                </apex:pageBlockSectionItem>
+                <apex:inputField label="A1" value="{!Incident__c.Agency_Level_1__c}" id="agencyLevel1"/>
+                <apex:inputField label="A2" value="{!Incident__c.Agency_Level_2__c}" id="agencyLevel2"/>
+                <apex:inputField label="A3" value="{!Incident__c.Agency_Level_3__c}" id="agencyLevel3"/>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" title="Effect of Incident">
+                <apex:inputField label="M1" value="{!Incident__c.Mechanism_Level_1__c}" id="mechLevel1"/>
+                <apex:inputField label="M2" value="{!Incident__c.Mechanism_Level_2__c}" id="mechLevel2"/>
+            </apex:pageBlockSection>
+            <apex:pageBlockSection columns="1" title="Submission">
+                <apex:inputField label="Submit Incident" value="{!Incident__c.Submit__c}" id="submitFlag"/>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+    </apex:form>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+
+    <script type="text/javascript">
+        var $j = jQuery.noConflict();
+        var Causes = [];           // Used for auto complete and to set the drop downs for A1, A2 and A3.
+        
+        // Fetch all the causes
+        IncidentWizardController.getAllCauses(function(result, event){
+            // Display should be Name while the selected value should be the ID for the Case record, Level 1 and Level 2 to set on the UI.
+            if(event.status){
+                // Sometimes classifiers have & which in REST call will get translated to &amp;
+                // Using the below snippet to decode not just & but all other problem guys like < > ' " ..etc
+                var div = document.createElement('div');
+                div.innerHTML = item.Level_3__c;
+                item.Level_3__c = div.firstChild.nodeValue;
+                
+                // Make an array where the label is the name and the value is the HR classification record.
+                $j.each(result, function(cnt, item){
+                    var Cause = {
+                        'label' : item.Level_3__c,
+                        'value' : item.Id,
+                        'level_1' : item.Level_1__c,
+                        'level_2' : item.Level_2__c,
+                        'level_3' : item.Level_3__c
+                    }
+                    Causes.push(Cause);
+                });
+                setAutoComplete();
+            }
+        });
+        
+        // Called once the response for Remote Action is returned
+        function setAutoComplete(){
+            $j("input[id*=search]").autocomplete({
+                source: Causes,
+                focus : setDropDowns,
+                select: setDropDowns
+            });
+            $j("input[id*=search]").removeAttr('disabled').attr('placeholder', 'Search Causes');
+        }
+        // Called when auto complete focus and select events are fired to set the drop down based on selection
+        function setDropDowns(event, ui){
+            $j("input[id*=search]").val( ui.item.label );
+            $j("select[id*=agencyLevel1]").val( ui.item.level_1 ).change();
+            $j("select[id*=agencyLevel2]").val( ui.item.level_2 ).change();
+            $j("select[id*=agencyLevel3]").val( ui.item.level_3 ).change();
+            // If the user has selected a value then traverse to Team Member Involved box
+            if(event.type == 'autocompleteselect')
+                $j("select[id*=mechLevel1]").focus();
+            return false;
+        }
+        
+        $j(document).ready(function(){
+            $j("input[id*=search]").attr("disabled", "disabled").attr('placeholder', 'Retrieving Causes...');     // Enable the search only after remote action completes
+        })
+    </script>
+</apex:page>

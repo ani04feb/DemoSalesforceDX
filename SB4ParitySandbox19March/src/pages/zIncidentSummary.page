@@ -1,0 +1,146 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard" docType="html-5.0">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko, Lok Jackson, Kim Davies, Paul Fayle
+    Company:       Salesforce.com
+    Description:   Incident Summary Page
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    26-Mar-14   Deepu               Initial Version - Ported functionality from existing wizard pages
+    5-Jul-15    Rohit               Added Time Picker Component and Other Changes related to rerendering
+    ------------------------------------------------------------>
+    <apex:composition template="zIncidentWizard">
+        <apex:define name="content"> 
+            <apex:variable var="inc" value="{!IF($CurrentPage.parameters.clone == '1', incident, Incident__c)}"></apex:variable>
+            <apex:pageBlockSection title="Instructions" columns="1">
+                <apex:outputField value="{!Incident__c.Incident_Entry_Instructions__c}"/>
+            </apex:pageBlockSection>
+                <apex:pageBlockSection title="Incident Details" columns="2" id="incidentDetails">
+                    <!--apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Details}" var="incidentField">
+                        <apex:inputField value="{!Incident__c[incidentField]}" styleClass="{!IF(incidentField.type == 'datetime','overrideWidth','')}"/>
+                    </apex:repeat-->
+                    <!-- Added site Details Section Field here -->
+                     <apex:inputField value="{!Incident__c.Account__c}">
+                        <apex:actionSupport event="onchange" action="{!setIncidentRecordType}" reRender="incidentDetails,scriptPanel,description" status="typeStatus">
+                        </apex:actionSupport>
+                    </apex:inputField>
+                    <apex:inputField value="{!Incident__c.Reporting_Person__c}" required="{!incident.RecordTypeId!=null}"/>
+                    <apex:inputField value="{!Incident__c.Incident_Date__c}" styleClass="overrideWidth" required="{!incident.RecordTypeId!=null}"/>
+                    <apex:pageBlockSectionItem >
+                        <apex:outputLabel value="Incident Time" for="incidentTime"/>
+                        <apex:outputPanel >
+                        <div class="requiredInput">
+                            <div class="requiredBlock"></div>
+                            <apex:input value="{!incidentTime}" id="incidentTime" styleClass="incidentTime" required="{!incident.RecordTypeId!=null}" label="Incident Time"/>
+                        </div>
+                        </apex:outputPanel>
+                    </apex:pageBlockSectionItem>
+                    <apex:inputField value="{!Incident__c.Incident_Location__c}" id="incidentDetails" required="{!incident.RecordTypeId!=null}">
+                        <apex:actionStatus id="typeStatus">
+                            <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                            </apex:facet>
+                        </apex:actionStatus>
+                    </apex:inputField>
+                    <apex:inputField value="{!Incident__c.Exact_Location__c}"/>
+                    <apex:inputField value="{!Incident__c.Hazard_Classification__c}" rendered="{!Incident__c.Hazard__c}" required="{!incident.RecordTypeId!=null}"/>
+                </apex:pageBlockSection>
+                <apex:pageBlockSection columns="1" id="description">
+                    <apex:inputField value="{!Incident__c.Description__c}" required="{!incident.RecordTypeId!=null}"/>
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection rendered="{!IF(Incident__c.Hazard__c == false, true, false)}" columns="1" id="CCTVSection">
+                    <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="CCTV Footage Captured?" for="CCTV"/>
+                    <apex:actionRegion >
+                        <apex:inputField value="{!Incident__c.CCTV_Footage_Captured__c}" styleClass="CCTV" id="CCTV">
+                            <apex:actionSupport event="onchange" reRender="CCTVSection,scriptPanel" status="cctvStatus"/>
+                            <apex:actionStatus id="cctvStatus">
+                                <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" 
+                                        style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:inputField>
+                    </apex:actionRegion>
+                    </apex:pageBlockSectionItem>
+                    <apex:inputField value="{!Incident__c.DVR_and_Camera_Name__c}" rendered="{!IF(Incident__c.CCTV_Footage_Captured__c=='Yes',true,false)}" styleClass="overrideWidth" id="dVRCamera"/>
+                    <apex:inputField value="{!Incident__c.Time_Stamp_of_Incident__c}" rendered="{!IF(Incident__c.CCTV_Footage_Captured__c=='Yes',true,false)}" styleClass="overrideWidth" id="timeStamp"/>
+                </apex:pageBlockSection>
+                
+                <apex:pageBlockSection columns="1" id="photos">
+                    <apex:pageBlockSectionItem >
+                    <apex:outputLabel value="Photographs Taken?" for="photographTaken"/>
+                    <apex:actionRegion >
+                        <apex:inputField value="{!Incident__c.Photographs_Taken__c}" styleClass="photographTaken" id="photographTaken">
+                            <apex:actionSupport event="onchange" rerender="photos,scriptPanel"/>
+                        </apex:inputField>
+                    </apex:actionRegion>
+                    </apex:pageBlockSectionItem>
+                    <apex:pageBlockSectionItem rendered="{!IF(Incident__c.Photographs_Taken__c == 'Yes', true, false)}">
+                        <span class="missingPhotograph" style="font-weight:bold;color:red;">{!$Label.Please_Upload_via_Add_File_Button} </span>
+                    </apex:pageBlockSectionItem>
+                </apex:pageBlockSection>
+            
+            <apex:pageBlockSection title="Incident Type" columns="1" rendered="{!Incident__c.Other_Incident__c}" id="otherIncident">
+                <!-- Reload as the Bread crumb and Navigation will change based on the selected incident type -->
+                <!--apex:repeat value="{!$ObjectType.Incident__c.FieldSets.Incident_Type}" var="typeField">
+                    <apex:inputField value="{!Incident__c[typeField]}">
+                        <apex:actionSupport event="onchange" reRender="Breadcrumbs" onsubmit="disableNav();" oncomplete="enableNav();"></apex:actionSupport>
+                    </apex:inputField>
+                </apex:repeat>
+                -->
+                <apex:inputField value="{!Incident__c.Type__c}">
+                    <apex:actionSupport event="onchange" action="{!resetOtherIncidentCompleted}"/>
+                </apex:inputField>
+                <apex:inputField value="{!Incident__c.Sub_Type__c}"/>
+                <apex:inputField value="{!Incident__c.Near_Miss__c}" label="Was this a Near Miss?">
+                    <apex:actionSupport event="onchange" rerender="otherIncident,scriptPanel" status="nearMissStatus"/>
+                    <apex:actionStatus id="nearMissStatus">
+                        <apex:facet name="start">
+                            <apex:image value="{!URLFOR($Resource.loading)}" 
+                                style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                        </apex:facet>
+                    </apex:actionStatus>
+                </apex:inputField>
+                <apex:inputField value="{!Incident__c.Near_Miss_Classification__c}" rendered="{!Incident__c.Near_Miss__c}"/>
+                <apex:inputHidden value="{!Incident__c.Injury_or_Illness__c}"/>
+                <apex:inputHidden value="{!Incident__c.Other_Incident__c}"/>
+                <apex:inputHidden value="{!Incident__c.Pages_Complete__c}"/>
+                <!--apex:inputHidden value="{!Incident__c.Incident_Date_Time__c}"/-->
+            </apex:pageBlockSection>
+            <!-- Removed this section 
+            <apex:pageBlockSection columns="1" title="Page Status">
+                <apex:inputField value="{!Incident__c.Page_1_Complete__c}" id="completedFlag"/>
+                <apex:inputHidden value="{!Incident__c.Submit__c}"/>
+            </apex:pageBlockSection>
+            -->
+            <apex:actionFunction name="reRenderBreadCrumbs" reRender="Breadcrumbs, pgButtons,scriptPanel" oncomplete="enableIncidentTypes(); enablePgButtons();"/>
+            <!-- Prerequisites: jQuery and jQuery UI Stylesheet -->
+            <apex:includeScript value="https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"/>
+            <apex:styleSheet value="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/redmond/jquery-ui.css" />
+            <apex:stylesheet value="{!URLFOR($Resource.PTTimeSelect,'/src/jquery.ptTimeSelect.css')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.PTTimeSelect,'/src/jquery.ptTimeSelect.js')}"/>
+            <apex:outputPanel id="scriptPanel">
+            <script type="text/javascript">
+             var $j = jQuery.noConflict();
+             $j(document).ready(function(){
+                 $j('.incidentTime').ptTimeSelect();
+                 //alert($j('.incidentTime').val());
+                // Re-render bread crumbs whenever incident type is selected
+                $j(".incidentType, .incidentType").change(function(){ disableIncidentTypes(); disablePgButtons(); reRenderBreadCrumbs(); });
+                // find the input fields and apply the time select to them.
+             });
+                // Since each checkbox issues a refresh for Navigation to work, do it one at a time
+                function disableIncidentTypes(){
+                    $j(".incidentType, .incidentType").attr("disabled", "disabled");
+                }
+                function enableIncidentTypes(){
+                    $j(".incidentType, .incidentType").removeAttr("disabled");
+                }
+            </script>
+           </apex:outputPanel>
+        </apex:define>
+    </apex:composition>
+</apex:page>

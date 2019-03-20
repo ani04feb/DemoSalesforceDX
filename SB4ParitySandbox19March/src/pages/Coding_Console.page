@@ -1,0 +1,188 @@
+<apex:page standardController="Incident__c" extensions="zIncidentWizard">
+    <!-------------------------------------------------------------
+    Author:        Deepu Chacko
+    Company:       Salesforce.com
+    Description:   Part of the Incident Create wizard for CIDs to specify the cause and effect of the Incident
+    Inputs:        None
+    History
+    <Date>      <Authors Name>     <Brief Description of Change>
+    17-Mar-14   Deepu               Initial Version - Autosearch Causes and typical Save
+    06-Jun-14   Lok Jackson         WP3951: Added Quick Coding (selection of a Quick Code pre=populates Agency and Mechanism values), also added support for search on Mechanism values
+    ------------------------------------------------------------>
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/cupertino/jquery-ui.min.css" />
+    <style>
+        /* Override font style and size */
+        .ui-menu-item a { font-size: 11px; font-family: 'Lucida Grande'; padding: 1px .4em; }
+        .ui-autocomplete{
+            max-height: 100px;
+            overflow-y: auto;       
+            overflow-x: hidden;
+        } 
+    </style>
+    
+    <apex:includeScript value="/support/console/28.0/integration.js"/>
+    <script type="text/javascript">
+        function refreshTab() {
+            sforce.console.getFocusedPrimaryTabId(refresh);
+        }
+        function refresh(result) {
+            sforce.console.refreshPrimaryTabById(result.id, true, null);
+        }
+  </script> 
+     
+  <apex:sectionHeader title="Coding"/>
+    <apex:form >
+        <apex:pageMessages id="messageArea"/>
+        <apex:pageBlock title="Incident Number {!Incident__c.Name}">
+            <apex:pageBlockButtons >
+                <apex:commandButton action="{!consoleSave}" value="Save" oncomplete="if(!({!codingConsoleError})) refreshTab();" reRender="messageArea"/>
+            </apex:pageBlockButtons>
+            
+            <apex:pageBlockSection columns="1" title="Incident Description">
+                <apex:outputField value="{!Incident__c.Description__c}"/>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1" title="Quick Coding (Optional)">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Select Quick Code</apex:outputLabel>
+                    <apex:selectList value="{!quickCode}" size="1">
+                        <apex:selectOptions value="{!QuickCodes}">
+                            <apex:actionStatus id="setStatus">
+                                <apex:facet name="start">
+                                    <apex:image value="{!URLFOR($Resource.loading)}" style="display: inline; margin-left:5px" height="11px" alt="Loading..."/>
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </apex:selectOptions>
+                        <apex:actionSupport event="onchange" action="{!setValuesFromCode}" rerender="search,agencyLevel1,agencyLevel2,agencyLevel3,findMech,mechLevel1,mechLevel2" status="setStatus" oncomplete="resetSearchFields()" />
+                    </apex:selectList>
+                </apex:pageBlockSectionItem>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1" title="Agency of Incident">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Search Agency</apex:outputLabel>
+                    <apex:inputText id="search"/>
+                </apex:pageBlockSectionItem>
+                <apex:inputField label="A1" value="{!Incident__c.Agency_Level_1__c}" id="agencyLevel1"/>
+                <apex:inputField label="A2" value="{!Incident__c.Agency_Level_2__c}" id="agencyLevel2"/>
+                <apex:inputField label="A3" value="{!Incident__c.Agency_Level_3__c}" id="agencyLevel3"/>
+            </apex:pageBlockSection>
+            
+            <apex:pageBlockSection columns="1" title="Mechanism of Incident">
+                <apex:pageBlockSectionItem >
+                    <apex:outputLabel >Search Mechanism</apex:outputLabel>
+                    <apex:inputText id="findMech"/>
+                </apex:pageBlockSectionItem>
+                <apex:inputField label="M1" value="{!Incident__c.Mechanism_Level_1__c}" id="mechLevel1"/>
+                <apex:inputField label="M2" value="{!Incident__c.Mechanism_Level_2__c}" id="mechLevel2"/>
+            </apex:pageBlockSection>
+            
+        </apex:pageBlock>
+    </apex:form>
+    
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+    <script type="text/javascript">
+        var $j = jQuery.noConflict();
+        var Causes = [];           // Used for auto complete and to set the drop downs for A1, A2 and A3.
+        var Mechanisms = [];       // Used for auto complete and to set the drop downs for M1 and M2.
+                
+        // Fetch all the causes
+        zIncidentWizard.getAllCauses(function(result, event){
+            // Display should be Name while the selected value should be the ID for the Case record, Level 1 and Level 2 to set on the UI.
+            if(event.status){
+                // Make an array where the label is the name and the value is the Dependent List Master record.
+                $j.each(result, function(cnt, item){
+                    // Sometimes classifiers have & which in REST call will get translated to &amp;
+                    // Using the below snippet to decode not just & but all other problem guys like < > ' " ..etc
+                    var div = document.createElement('div');
+                    div.innerHTML = item.Level_3__c;
+                    item.Level_3__c = div.firstChild.nodeValue;
+                            
+                    var Cause = {
+                        'label' : item.Level_3__c,
+                        'value' : item.Id,
+                        'level_1' : item.Level_1__c,
+                        'level_2' : item.Level_2__c,
+                        'level_3' : item.Level_3__c
+                    }
+                    Causes.push(Cause);
+                });
+                setAutoComplete();
+            }
+        });
+                
+        zIncidentWizard.getAllMechanisms(function(result, event){
+            // Display should be Name while the selected value should be the ID for the Case record, Level 1 and Level 2 to set on the UI.
+            if(event.status){
+                // Make an array where the label is the name and the value is the Dependent List Master record.
+                $j.each(result, function(cnt, item){
+                    // Sometimes classifiers have & which in REST call will get translated to &amp;
+                    // Using the below snippet to decode not just & but all other problem guys like < > ' " ..etc
+                    var div2 = document.createElement('div');
+                    div2.innerHTML = item.Level_2__c;
+                    item.Level_2__c = div2.firstChild.nodeValue;
+                            
+                    var Mechanism = {
+                        'label' : item.Level_2__c,
+                        'value' : item.Id,
+                        'level_1' : item.Level_1__c,
+                        'level_2' : item.Level_2__c
+                    }
+                    Mechanisms.push(Mechanism);
+                });
+                setAutoCompleteMechanism();
+            }
+        });
+                
+        // Called once the response for Remote Action is returned
+        function setAutoComplete(){
+            $j("input[id*=search]").autocomplete({
+                source: Causes,
+                focus : setDropDowns,
+                select: setDropDowns
+            });
+            $j("input[id*=search]").removeAttr('disabled').attr('placeholder', 'Search Causes');
+        }
+                
+        // Called once the response for Remote Action is returned
+        function setAutoCompleteMechanism(){
+            $j("input[id*=findMech]").autocomplete({
+                source: Mechanisms,
+                focus : setDropDownsMech,
+                select: setDropDownsMech
+            });
+            $j("input[id*=findMech]").removeAttr('disabled').attr('placeholder', 'Search Mechanisms');
+        }
+        // Called when auto complete focus and select events are fired to set the drop down based on selection
+        function setDropDowns(event, ui){
+            $j("input[id*=search]").val( ui.item.label );
+            $j("select[id*=agencyLevel1]").val( ui.item.level_1 ).change();
+            $j("select[id*=agencyLevel2]").val( ui.item.level_2 ).change();
+            $j("select[id*=agencyLevel3]").val( ui.item.level_3 ).change();
+            // If the user has selected a value then traverse to Mechanism box
+            if(event.type == 'autocompleteselect')
+                $j("input[id*=findMech]").focus();
+            return false;
+        }
+        // Called when auto complete focus and select events are fired to set the drop down based on selection
+        function setDropDownsMech(event, ui){
+            $j("input[id*=findMech]").val( ui.item.label );
+            $j("select[id*=mechLevel1]").val( ui.item.level_1 ).change();
+            $j("select[id*=mechLevel2]").val( ui.item.level_2 ).change();
+            return false;
+        }
+        
+        function resetSearchFields(){
+            $j("input[id*=search]").val( '' );
+            setAutoComplete();
+            $j("input[id*=findMech]").val( '' );
+            setAutoCompleteMechanism();
+        }
+                
+        $j(document).ready(function(){
+            $j("input[id*=search]").attr("disabled", "disabled").attr('placeholder', 'Retrieving Agencies...');     // Enable the search only after remote action completes
+            $j("input[id*=findMech]").attr("disabled", "disabled").attr('placeholder', 'Retrieving Mechanisms...');     // Enable the search only after remote action completes
+        })
+    </script>
+</apex:page>
